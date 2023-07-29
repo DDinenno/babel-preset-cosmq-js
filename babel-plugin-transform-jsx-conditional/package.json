@@ -1,0 +1,8 @@
+{
+  "name": "babel-plugin-transform-jsx-conditional",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./lib/index.js",
+  "author": "Domenic Di Nenno",
+  "license": "ISC"
+}
