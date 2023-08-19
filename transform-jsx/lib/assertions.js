@@ -22,7 +22,12 @@ function isCalleeModuleMethod(node, property) {
   return false;
 }
 
-function isModuleMethod(path, node, name) {
+function isModuleMethod(path, name, _node = null) {
+  if (!path || !path.node) return;
+
+  const node = _node || path.node;
+  if (!node) throw new Error("Node isn't found!");
+
   if (node.type === "CallExpression") {
     const callee = node.callee;
 
@@ -56,14 +61,14 @@ function isModuleMethod(path, node, name) {
 function isIdentifierInDeps(path) {
   return matchParentRecursively(path, (p) => {
     if (p.type === "ArrayExpression") {
-      if (isModuleMethod(p.parentPath, p.parentPath.node, "conditional")) {
+      if (isModuleMethod(p.parentPath, "conditional")) {
         if (p.parentPath.node.arguments[0] === p.node) return true;
         return false;
       }
 
       return (
-        isModuleMethod(p.parentPath, p.parentPath.node, "compute") ||
-        isModuleMethod(p.parentPath, p.parentPath.node, "effect")
+        isModuleMethod(p.parentPath, "compute") ||
+        isModuleMethod(p.parentPath, "effect")
       );
     }
   });
@@ -100,9 +105,7 @@ function bodyContainsContext(path) {
 }
 
 function isWrappedInComputedFunc(path) {
-  return matchParentRecursively(path, (p) =>
-    isModuleMethod(p, p.node, "compute")
-  );
+  return matchParentRecursively(path, (p) => isModuleMethod(p, "compute"));
 }
 
 function isInConditionalCondition(path) {
@@ -214,8 +217,32 @@ function isObservableAssignment(path) {
   return false;
 }
 
+function isEntityShorthand(path, name) {
+  if (
+    path.node.type === "VariableDeclarator" &&
+    path.node.init.type === "CallExpression" &&
+    path.node.init.callee.name === name
+  )
+    return true;
+}
+
+function isInObservableArray(path) {
+  return matchParentRecursively(path, (p) =>
+    isModuleMethod(p, "observableArray")
+  );
+}
+
+function isObservableArrayData(path) {
+  return (
+    isModuleMethod(path.parentPath, "observableArray") &&
+    Array.isArray(path.container) &&
+    path.container[0] === path.node
+  );
+}
+
 module.exports = {
   isWrappedInConditionalStatement,
+  isInConditionalCondition,
   isWrappedInComputedFunc,
   isWrappedInPropertyValueGetter,
   bodyContainsContext,
@@ -236,4 +263,7 @@ module.exports = {
   isIdentifierInJSXAttribute,
   isObservableAccessed,
   isObservableAssignment,
+  isInObservableArray,
+  isEntityShorthand,
+  isObservableArrayData,
 };

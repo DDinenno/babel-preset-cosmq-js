@@ -19,9 +19,9 @@ function getObservableBinding(path, name) {
   if (!init) return;
 
   if (
-    ((init.type === "CallExpression" || init.type === "MemberExpression") &&
-      assert.isCalleeModuleMethod(init.callee, "compute")) ||
-    assert.isCalleeModuleMethod(init.callee, "observe")
+    assert.isCalleeModuleMethod(init.callee, "compute") ||
+    assert.isCalleeModuleMethod(init.callee, "observe") || 
+    assert.isModuleMethod(path,  "compute", init)
   )
     return binding;
 }
@@ -88,6 +88,15 @@ function findComponentBlockStatement(path) {
     });
 }
 
+function findParentVariableDeclarator(path) {
+  return utils.findNearestAncestor(path, (p) => {
+    if (p !== path && p.node.type === "VariableDeclarator") {
+      return true;
+    }
+  });
+}
+
+
 module.exports = {
   getRootBoundNode,
   getObservableBinding,
@@ -96,4 +105,5 @@ module.exports = {
   getFunctionParams,
   findComponentRoot,
   findComponentBlockStatement,
+  findParentVariableDeclarator,
 };

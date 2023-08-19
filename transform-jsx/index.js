@@ -40,6 +40,7 @@ exports.default = function (babel) {
     if (assert.isWrappedInConditionalStatement(path)) return;
     if (assert.isWrappedInSetter(path)) return;
     if (assert.isCalleeModuleMethod(path.node, "conditional")) return false;
+    if (assert.isInObservableArray(path)) return false;
 
     if (
       (path.parent && path.parent.type === "VariableDeclarator") ||
@@ -135,11 +136,11 @@ exports.default = function (babel) {
     var openingElement = path.node.openingElement;
     var tagName = openingElement.name.name;
     const isComponent = tagName[0] === tagName[0].toUpperCase();
+    var reactIdentifier = t.identifier("PlaceholderJs");
 
     if (isComponent) {
       const componentName = tagName.replace(/^Component_/, "");
 
-      var reactIdentifier = t.identifier("PlaceholderJs");
       var createElementIdentifier = t.identifier("registerComponent");
       var callee = t.memberExpression(reactIdentifier, createElementIdentifier);
       var callExpression = t.callExpression(callee, [
@@ -153,23 +154,17 @@ exports.default = function (babel) {
       const children = t.arrayExpression([]);
       children.elements = path.node.children;
 
-      const typePropery = t.objectProperty(
-        t.stringLiteral("type"),
-        t.stringLiteral(tagName)
+      const callee = t.memberExpression(
+        reactIdentifier,
+        t.identifier("renderElement")
       );
-      const attributesProperty = t.objectProperty(
-        t.stringLiteral("properties"),
-        getProperties(path)
-      );
-      const childrenProperty = t.objectProperty(
-        t.stringLiteral("children"),
-        children
-      );
+      const callExpression = t.callExpression(callee, [
+        t.stringLiteral(tagName),
+        getProperties(path),
+        children,
+      ]);
 
-      const objProperties = [typePropery, attributesProperty, childrenProperty];
-      const object = t.objectExpression(objProperties);
-
-      path.replaceWith(object, path.node);
+      path.replaceWith(callExpression, path.node);
     }
   };
 
@@ -205,6 +200,7 @@ exports.default = function (babel) {
       if (assert.isIdentifierInJSXAttribute(path)) return;
       if (assert.isObservableAccessed(path)) return;
       if (assert.isObservableAssignment(path)) return;
+      if (assert.isObservableArrayData(path)) return;
 
       const callee = t.memberExpression(
         t.identifier(path.node.name),
@@ -216,38 +212,64 @@ exports.default = function (babel) {
     }
   };
 
+  const transformCallExpression = (path) => {
+    if (
+      assert.isModuleMethod(path, "effect") ||
+      assert.isModuleMethod(path, "compute")
+    ) {
+      // transforms shorthand methods to include deps, if not provided
+      if (path.node.arguments[1] == null) {
+        const observables = {};
+
+        const list = [
+          ...query.findNestedObservables(path),
+          ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables, ]
+        ];
+
+        list.forEach((obsPath) => {
+          if (obsPath.parentPath.node.type === "JSXExpressionContainer") return;
+
+          if (
+            assert.matchParentRecursively(
+              obsPath,
+              (p) =>
+                (assert.isModuleMethod(p, "compute") && p !== path) ||
+                assert.isWrappedInConditionalStatement(p) ||
+                assert.isInConditionalCondition(p)
+            ) ||
+            (obsPath.parentPath &&
+              obsPath.parentPath.type === "MemberExpression" &&
+              (assert.isObservableAccessed(obsPath) ||
+                assert.isObservableAssignment(obsPath))) ||
+            (obsPath.parentPath &&
+              obsPath.parentPath.type === "AssignmentExpression")
+          )
+            return;
+
+          observables[obsPath.node.name] = obsPath.node;
+        });
+
+        const body =
+          path.node.arguments[0].type !== "ArrowFunctionExpression"
+            ? t.arrowFunctionExpression([], path.node.arguments[0])
+            : path.node.arguments[0];
+        const deps = t.arrayExpression(Object.values(observables));
+
+        path.node.arguments = [body, deps];
+      }
+    } else {
+      transformComputed(path);
+    }
+  };
+
   return {
     name: "custom-jsx-plugin",
     manipulateOptions: function manipulateOptions(opts, parserOpts) {
       parserOpts.plugins.push("jsx");
     },
     visitor: {
-      CallExpression(path) {
-        if (
-          assert.isModuleMethod(path, path.node, "effect") ||
-          assert.isModuleMethod(path, path.node, "compute")
-        ) {
-          // transforms shorthand methods to include deps, if not provided
-          if (path.node.arguments[1] == null) {
-            const observables = [
-              ...query.findNestedObservables(path),
-              ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables,
-            ].map((p) => p.node);
-
-            const body =
-              path.node.arguments[0].type !== "ArrowFunctionExpression"
-                ? t.arrowFunctionExpression([], path.node.arguments[0])
-                : path.node.arguments[0];
-            const deps = t.arrayExpression(observables);
-
-            path.node.arguments = [body, deps];
-          }
-        } else {
-          transformComputed(path);
-        }
-      },
       JSXExpressionContainer(path) {
-        if (assert.isModuleMethod(path, path.node.expression, "compute")) {
+        if (assert.isModuleMethod(path, "compute", path.node.expression)) {
           const component = query.findComponentRoot(path);
           if (!component) return;
 
@@ -266,17 +288,13 @@ exports.default = function (babel) {
               t.variableDeclarator(t.identifier(name), path.node.expression),
             ]);
 
-            block.node.body = [
-              ...block.node.body.slice(0, returnIndex),
-              hoisted,
-              ...block.node.body.slice(returnIndex, block.node.body.length),
-            ];
+            let index = returnIndex;
 
             // has to traverse block to apply transformations on the recently hoisted variable,
             // in-case there's JSXElements deeply nested in the expression
             block.traverse({
               Identifier: transformIdentifier,
-              CallExpression: transformComputed,
+              CallExpression: transformCallExpression,
               ConditionalExpression: transformComputed,
               BinaryExpression: transformComputed,
               LogicalExpression: transformComputed,
@@ -289,6 +307,34 @@ exports.default = function (babel) {
             });
 
             path.replaceWith(t.jsxExpressionContainer(t.identifier(name)));
+
+            const parentVariable = query.findParentVariableDeclarator(path);
+
+            if (parentVariable) {
+              const matchedIndex = block.node.body.findIndex((n) => {
+                if (n.type === "VariableDeclaration") {
+                  if (
+                    n.declarations.find(
+                      (dec) =>
+                        dec.id && dec.id.name === parentVariable.node.id.name
+                    )
+                  ) {
+                    return true;
+                  }
+                }
+              });
+
+              if (matchedIndex != -1) {
+                // if referenced inside a variable, move the hoisted index before that variable
+                index = matchedIndex;
+              }
+            }
+
+            block.node.body = [
+              ...block.node.body.slice(0, index),
+              hoisted,
+              ...block.node.body.slice(index, block.node.body.length),
+            ];
           }
         } else path.replaceWith(path.node.expression);
       },
@@ -303,7 +349,7 @@ exports.default = function (babel) {
       JSXElement(path) {
         path.traverse({
           Identifier: transformIdentifier,
-          CallExpression: transformComputed,
+          CallExpression: transformCallExpression,
           ConditionalExpression: transformComputed,
           BinaryExpression: transformComputed,
           LogicalExpression: transformComputed,
@@ -313,6 +359,7 @@ exports.default = function (babel) {
 
         transformJSX(path);
       },
+      CallExpression: transformCallExpression,
       Identifier: transformIdentifier,
       ConditionalExpression: transformComputed,
       BinaryExpression: transformComputed,
