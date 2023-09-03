@@ -19,9 +19,8 @@ function getObservableBinding(path, name) {
   if (!init) return;
 
   if (
-    assert.isCalleeModuleMethod(init.callee, "compute") ||
-    assert.isCalleeModuleMethod(init.callee, "observe") || 
-    assert.isModuleMethod(path,  "compute", init)
+    assert.isModuleMethod(path, "observe", init) ||
+    assert.isModuleMethod(path, "compute", init)
   )
     return binding;
 }
@@ -95,7 +94,6 @@ function findParentVariableDeclarator(path) {
     }
   });
 }
-
 
 module.exports = {
   getRootBoundNode,

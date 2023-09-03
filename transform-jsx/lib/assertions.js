@@ -76,7 +76,7 @@ function isIdentifierInDeps(path) {
 
 function isWrappedInPropertyValueGetter(path) {
   return matchParentRecursively(path, (parentPath) =>
-    isCalleeModuleMethod(parentPath.node, "getPropValue")
+  isModuleMethod(parentPath.node, "getPropValue")
   );
 }
 
@@ -84,8 +84,8 @@ function isInComputedDeps(path) {
   if (path.parent == null) return false;
   if (path.type === "ArrayExpression") {
     if (
-      isCalleeModuleMethod(path.parent.callee, "compute") ||
-      isCalleeModuleMethod(path.parent.callee, "conditional")
+      isModuleMethod(path.parent.callee, "compute") ||
+      isModuleMethod(path.parent.callee, "conditional")
     )
       return true;
   }
@@ -119,14 +119,14 @@ function isWrappedInConditionalStatement(path) {
   return matchParentRecursively(
     path,
     (p) =>
-      isCalleeModuleMethod(p.node.callee, "conditional") &&
+    isModuleMethod(p.node.callee, "conditional") &&
       isInConditionalCondition(path)
   );
 }
 
 function isInComponentProps(path) {
   return matchParentRecursively(path, (parentPath) => {
-    return isCalleeModuleMethod(parentPath.node.callee, "registerComponent");
+    return isModuleMethod(parentPath.node.callee, "registerComponent");
   });
 }
 

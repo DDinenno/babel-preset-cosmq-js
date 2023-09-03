@@ -39,7 +39,7 @@ exports.default = function (babel) {
     if (assert.isWrappedInComputedFunc(path)) return;
     if (assert.isWrappedInConditionalStatement(path)) return;
     if (assert.isWrappedInSetter(path)) return;
-    if (assert.isCalleeModuleMethod(path.node, "conditional")) return false;
+    if (assert.isModuleMethod(path, "conditional", path.node)) return false;
     if (assert.isInObservableArray(path)) return false;
 
     if (
@@ -132,7 +132,7 @@ exports.default = function (babel) {
 
   let hoistCount = 0;
 
-  const transformJSX = (path) => {
+  const transformJSX = (path, inner = false) => {
     var openingElement = path.node.openingElement;
     var tagName = openingElement.name.name;
     const isComponent = tagName[0] === tagName[0].toUpperCase();
@@ -154,10 +154,13 @@ exports.default = function (babel) {
       const children = t.arrayExpression([]);
       children.elements = path.node.children;
 
-      const callee = t.memberExpression(
-        reactIdentifier,
-        t.identifier("renderElement")
-      );
+      const fnName = inner ? "registerElement" : "renderElement";
+
+      path.traverse({
+        JSXElement: (path) => transformJSX(path, true),
+      });
+
+      const callee = t.memberExpression(reactIdentifier, t.identifier(fnName));
       const callExpression = t.callExpression(callee, [
         t.stringLiteral(tagName),
         getProperties(path),
