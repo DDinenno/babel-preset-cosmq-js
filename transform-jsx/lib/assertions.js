@@ -13,7 +13,7 @@ function isInTemplateLiteral(path) {
 function isCalleeModuleMethod(node, property) {
   if (!node) return;
   if (node.type === "MemberExpression") {
-    if (node.object.name === "PlaceholderJs") {
+    if (node.object.name === "Cosmq") {
       return node.property.name === property;
     }
   }
@@ -39,7 +39,7 @@ function isModuleMethod(path, name, _node = null) {
         // checks to see if matches with a named import, regardless of it being mapped to a new identifier
         return (
           binding.path.type === "ImportSpecifier" &&
-          binding.path.parentPath.node.source.value === "reactive-frame" &&
+          binding.path.parentPath.node.source.value === "cosmq-js" &&
           binding.path.node.imported.name === name &&
           binding.path.node.local.name === callee.name
         );
@@ -48,7 +48,7 @@ function isModuleMethod(path, name, _node = null) {
 
     if (callee.type === "MemberExpression") {
       if (callee.type === "MemberExpression") {
-        if (callee.object.name === "PlaceholderJs") {
+        if (callee.object.name === "Cosmq") {
           return callee.property.name === name;
         }
       }

@@ -126,7 +126,7 @@ exports.default = function (babel) {
       mapExpression(this.else);
 
       const callee = t.memberExpression(
-        t.identifier("PlaceholderJs"),
+        t.identifier("Cosmq"),
         t.identifier("conditional")
       );
 

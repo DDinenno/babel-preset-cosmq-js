@@ -53,7 +53,7 @@ exports.default = function (babel) {
 
       if (observables.length) {
         const callee = t.memberExpression(
-          t.identifier("PlaceholderJs"),
+          t.identifier("Cosmq"),
           t.identifier("compute")
         );
 
@@ -67,7 +67,7 @@ exports.default = function (babel) {
 
   const transformPropGetter = (path) => {
     const callee = t.memberExpression(
-      t.identifier("PlaceholderJs"),
+      t.identifier("Cosmq"),
       t.identifier("getPropValue")
     );
 
@@ -136,7 +136,7 @@ exports.default = function (babel) {
     var openingElement = path.node.openingElement;
     var tagName = openingElement.name.name;
     const isComponent = tagName[0] === tagName[0].toUpperCase();
-    var reactIdentifier = t.identifier("PlaceholderJs");
+    var reactIdentifier = t.identifier("Cosmq");
 
     if (isComponent) {
       const componentName = tagName.replace(/^Component_/, "");
