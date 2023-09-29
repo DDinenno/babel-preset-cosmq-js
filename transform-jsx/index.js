@@ -154,7 +154,7 @@ exports.default = function (babel) {
       const children = t.arrayExpression([]);
       children.elements = path.node.children;
 
-      const fnName = inner ? "registerElement" : "renderElement";
+      const fnName = "registerElement" 
 
       path.traverse({
         JSXElement: (path) => transformJSX(path, true),
