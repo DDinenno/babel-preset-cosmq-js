@@ -7,13 +7,24 @@ exports.__esModule = true;
 exports.default = function (babel) {
   const { types: t } = babel;
 
-  function getProperties(path) {
+  function mapPropertyValue(node) {
+    if (node == null) {
+      return true;
+    } else if (node.type === "JSXExpressionContainer")
+      return node.expression;
+    else if (node.type === "JSXExpressionContainer")
+      return node.expression;
+    return node;
+  }
+
+  function getProperties(path, component = false) {
     const attrsObject = t.objectExpression([]);
     const attributes = path.node.openingElement.attributes;
+    const properties = [];
 
-    const mapProperties = attributes.map((attr) => {
+    attributes.forEach((attr) => {
       let property;
-      let value;
+      const value = mapPropertyValue(attr.value)
 
       if (attr.name.type === "JSXNamespacedName")
         property = t.stringLiteral(
@@ -21,16 +32,23 @@ exports.default = function (babel) {
         );
       else property = t.stringLiteral(attr.name.name);
 
-      if (attr.value.type === "JSXExpressionContainer")
-        value = attr.value.expression;
-      else if (attr.value.type === "JSXExpressionContainer")
-        value = attr.value.expression;
-      else value = attr.value;
 
-      return t.objectProperty(property, value);
+      properties.push(t.objectProperty(property, value));
     });
 
-    attrsObject.properties = attrsObject.properties.concat(mapProperties);
+    if (component) {
+      properties.push(
+        t.objectProperty(
+          t.stringLiteral("children"),
+          t.arrayExpression(
+            path.node.children.map(child => mapPropertyValue(child))
+          )
+        )
+      );
+    }
+
+    attrsObject.properties = attrsObject.properties.concat(properties);
+
     return attrsObject;
   }
 
@@ -146,7 +164,7 @@ exports.default = function (babel) {
       var callExpression = t.callExpression(callee, [
         t.stringLiteral(componentName),
         t.identifier(tagName),
-        getProperties(path),
+        getProperties(path, true),
       ]);
 
       path.replaceWith(callExpression, path.node);
@@ -154,7 +172,7 @@ exports.default = function (babel) {
       const children = t.arrayExpression([]);
       children.elements = path.node.children;
 
-      const fnName = "registerElement" 
+      const fnName = "registerElement";
 
       path.traverse({
         JSXElement: (path) => transformJSX(path, true),
