@@ -59,6 +59,7 @@ exports.default = function (babel) {
     if (assert.isWrappedInSetter(path)) return;
     if (assert.isModuleMethod(path, "conditional", path.node)) return false;
     if (assert.isInObservableArray(path)) return false;
+    if(assert.isWrappedInObserveFunc(path)) return false
 
     if (
       (path.parent && path.parent.type === "VariableDeclarator") ||

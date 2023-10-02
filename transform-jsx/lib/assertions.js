@@ -108,6 +108,10 @@ function isWrappedInComputedFunc(path) {
   return matchParentRecursively(path, (p) => isModuleMethod(p, "compute"));
 }
 
+function isWrappedInObserveFunc(path) {
+  return matchParentRecursively(path, (p) => isModuleMethod(p, "observe"));
+}
+
 function isInConditionalCondition(path) {
   return matchParentRecursively(
     path,
@@ -257,6 +261,7 @@ module.exports = {
   isComponentIdentifier,
   isInBlockStatement,
   isWrappedInSetter,
+  isWrappedInObserveFunc,
   isModuleMethod,
   isIdentifierInDeps,
   isInnerFunction,
