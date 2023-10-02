@@ -158,12 +158,15 @@ exports.default = function (babel) {
 
     if (isComponent) {
       const componentName = tagName.replace(/^Component_/, "");
+      const componentDeclarationName = `Component_${componentName}`
+
+      const isDeclaredInFile = !!query.getRootBoundNode(path, componentDeclarationName)
 
       var createElementIdentifier = t.identifier("registerComponent");
       var callee = t.memberExpression(reactIdentifier, createElementIdentifier);
       var callExpression = t.callExpression(callee, [
         t.stringLiteral(componentName),
-        t.identifier(tagName),
+        t.identifier(isDeclaredInFile ? componentDeclarationName : tagName ),
         getProperties(path, true),
       ]);
 
