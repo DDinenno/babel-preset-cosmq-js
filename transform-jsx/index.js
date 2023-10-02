@@ -9,7 +9,7 @@ exports.default = function (babel) {
 
   function mapPropertyValue(node) {
     if (node == null) {
-      return true;
+      return t.booleanLiteral(true)
     } else if (node.type === "JSXExpressionContainer")
       return node.expression;
     else if (node.type === "JSXExpressionContainer")
