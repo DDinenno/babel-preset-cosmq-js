@@ -1,6 +1,6 @@
 # Babel Preset Cosmq JS
 
-This is a babel preset used for the [Cosmq JS](https://github.com/DDinenno/cosmq-js)
+This is a babel preset used for the <a href="https://github.com/DDinenno/cosmq-js">Cosmq JS</a>
 
 ## Installation
 > npm i babel-preset-cosmq-js
