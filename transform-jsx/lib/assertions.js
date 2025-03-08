@@ -76,7 +76,7 @@ function isIdentifierInDeps(path) {
 
 function isWrappedInPropertyValueGetter(path) {
   return matchParentRecursively(path, (parentPath) =>
-  isModuleMethod(parentPath.node, "getPropValue")
+    isModuleMethod(parentPath.node, "getPropValue")
   );
 }
 
@@ -108,6 +108,13 @@ function isWrappedInComputedFunc(path) {
   return matchParentRecursively(path, (p) => isModuleMethod(p, "compute"));
 }
 
+function isWrappedInEffectFunc(path) {
+  return matchParentRecursively(path, (p) => isModuleMethod(p, "effect"));
+}
+
+// function isInComponentBody()
+
+
 function isWrappedInObserveFunc(path) {
   return matchParentRecursively(path, (p) => isModuleMethod(p, "observe"));
 }
@@ -123,7 +130,7 @@ function isWrappedInConditionalStatement(path) {
   return matchParentRecursively(
     path,
     (p) =>
-    isModuleMethod(p.node.callee, "conditional") &&
+      isModuleMethod(p.node.callee, "conditional") &&
       isInConditionalCondition(path)
   );
 }
@@ -248,6 +255,7 @@ module.exports = {
   isWrappedInConditionalStatement,
   isInConditionalCondition,
   isWrappedInComputedFunc,
+  isWrappedInEffectFunc,
   isWrappedInPropertyValueGetter,
   bodyContainsContext,
   isInComputedDeps,
