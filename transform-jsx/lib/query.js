@@ -63,6 +63,19 @@ function getFunctionParams(path) {
   }
 }
 
+function findFunctionRoot(path) {
+  let foundPath;
+
+  assert.matchParentRecursively(path, (parentPath) => {
+    if (assert.isInBlockStatement(path)) {
+      foundPath = parentPath;
+      return true;
+    }
+  });
+
+  return foundPath;
+}
+
 function findComponentRoot(path) {
   let componentPath;
 
@@ -77,6 +90,14 @@ function findComponentRoot(path) {
   });
 
   return componentPath;
+}
+
+function findComponentBlockStatement(path) {
+  if (findComponentRoot(path))
+    return utils.findNearestAncestor(path, (p) => {
+      if (p.node.type === "BlockStatement" && !assert.isInnerFunction(path))
+        return true;
+    });
 }
 
 function findComponentBlockStatement(path) {
@@ -102,6 +123,7 @@ module.exports = {
   findNestedObservables,
   getFunctionParams,
   findComponentRoot,
+  findFunctionRoot,
   findComponentBlockStatement,
   findParentVariableDeclarator,
 };

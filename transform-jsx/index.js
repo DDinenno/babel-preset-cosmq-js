@@ -91,6 +91,13 @@ exports.default = function (babel) {
       (path.parent.type === "JSXExpressionContainer" &&
         path.node.type !== "CallExpression")
     ) {
+      if (path.parent && path.parent.type === "VariableDeclarator") {
+        const componentRoot = query.findComponentRoot(path);
+        if (componentRoot && componentRoot !== query.findFunctionRoot(path)) {
+          return;
+        }
+      }
+
       const observables = [
         ...query.findNestedObservables(path),
         ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
