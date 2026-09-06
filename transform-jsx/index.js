@@ -5,141 +5,11 @@ const utils = require("./lib/utils");
 
 exports.__esModule = true;
 
+
 exports.default = function (babel) {
   const { types: t } = babel;
+  let hoistCount = 0;
 
-  function isImportIdentifier(path) {
-    if (
-      path.parent &&
-      (path.parent.type === "ImportSpecifier" ||
-        path.parent.type === "ImportDefaultSpecifier")
-    )
-      return false;
-    const binding = query.getRootBoundNode(path, path.node.name);
-    if (binding && binding.kind === "module") {
-      if (
-        binding.path &&
-        binding.path.parentPath &&
-        binding.path.parentPath.node &&
-        binding.path.parentPath.node.source &&
-        binding.path.parentPath.node.source.value === "cosmq-js"
-      )
-        return false;
-      return true;
-    }
-    return false;
-  }
-
-  function mapPropertyValue(node) {
-    if (node == null) {
-      return t.booleanLiteral(true);
-    } else if (node.type === "JSXExpressionContainer") return node.expression;
-    else if (node.type === "JSXExpressionContainer") return node.expression;
-    return node;
-  }
-
-  function getProperties(path, component = false) {
-    const attrsObject = t.objectExpression([]);
-    const attributes = path.node.openingElement.attributes;
-    const properties = [];
-
-    attributes.forEach((attr) => {
-      let property;
-      const value = mapPropertyValue(attr.value);
-
-      if (attr.name.type === "JSXNamespacedName")
-        property = t.stringLiteral(
-          attr.name.namespace.name + ":" + attr.name.name.name,
-        );
-      else property = t.stringLiteral(attr.name.name);
-
-      properties.push(t.objectProperty(property, value));
-    });
-
-    if (component) {
-      properties.push(
-        t.objectProperty(
-          t.stringLiteral("children"),
-          t.arrayExpression(
-            path.node.children.map((child) => mapPropertyValue(child)),
-          ),
-        ),
-      );
-    }
-
-    attrsObject.properties = attrsObject.properties.concat(properties);
-
-    return attrsObject;
-  }
-
-  const transformComputed = (path) => {
-    if (assert.isInnerFunction(path)) return;
-    if (assert.isWrappedInComputedFunc(path)) return;
-    if (assert.isWrappedInConditionalStatement(path)) return;
-    if (assert.isWrappedInComputedFunc(path)) return;
-    if (assert.isWrappedInEffectFunc(path)) return;
-    if (assert.isWrappedInSetter(path)) return;
-    if (assert.isModuleMethod(path, "conditional", path.node)) return false;
-    if (assert.isInObservableArray(path)) return false;
-    if (assert.isWrappedInObserveFunc(path)) return false;
-
-    if (path.node.type === "CallExpression") {
-      return false;
-    }
-    if (
-      (path.parent && path.parent.type === "VariableDeclarator") ||
-      (path.parent.type === "JSXExpressionContainer" &&
-        path.node.type !== "CallExpression")
-    ) {
-      if (path.parent && path.parent.type === "VariableDeclarator") {
-        const componentRoot = query.findComponentRoot(path);
-        if (componentRoot && componentRoot !== query.findFunctionRoot(path)) {
-          return;
-        }
-      }
-
-      const observables = [
-        ...query.findNestedObservables(path),
-        ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
-        // ...query.findNestedIdentifiers(path, isImportIdentifier), // assume imports are observables
-      ].map((p) => p.node);
-
-      if (observables.length) {
-        const callee = t.memberExpression(
-          t.identifier("Cosmq"),
-          t.identifier("compute"),
-        );
-
-        const depArray = t.arrayExpression(observables);
-        const arrowFunc = t.ArrowFunctionExpression([], path.node);
-        const callExpression = t.callExpression(callee, [arrowFunc, depArray]);
-        path.replaceWith(callExpression, path.node);
-      }
-    }
-  };
-
-  const transformPropGetter = (path) => {
-    const callee = t.memberExpression(
-      t.identifier("Cosmq"),
-      t.identifier("getPropValue"),
-    );
-
-    const callExpression = t.callExpression(callee, [path.node]);
-    path.replaceWith(callExpression);
-  };
-
-  function isObservableRef(path) {
-    if (path.node.type !== "Identifier") return false;
-    const name = path.node.name;
-    const binding = query.getObservableBinding(path, name);
-
-    if (binding) {
-      const isRef = binding.referencePaths.find((p) => p === path);
-      if (isRef) return true;
-    }
-
-    return false;
-  }
 
   function isPropIdentifier(path) {
     const component = query.findComponentRoot(path);
@@ -185,15 +55,259 @@ exports.default = function (babel) {
     }
   }
 
-  let hoistCount = 0;
+  const transformComputed = (path) => {
+    if (assert.isInnerFunction(path)) return;
+    if (assert.isWrappedInComputedFunc(path)) return;
+    if (assert.isWrappedInConditionalStatement(path)) return;
+    if (assert.isWrappedInEffectFunc(path)) return;
+    if (assert.isWrappedInSetter(path)) return;
+    if (assert.isModuleMethod(path, "conditional", path.node)) return false;
+    if (assert.isInReactiveList(path)) return false;
+    if (assert.isWrappedInObserveFunc(path)) return false;
 
-  const transformJSX = (path, inner = false) => {
+    if (path.node.type === "CallExpression") {
+      return false;
+    }
+
+
+    if (path.node.type === "JSXAttribute") {
+      if (!path.node.value || !t.isJSXExpressionContainer(path.node.value)) {
+        return;
+      }
+      if (assert.isWrappedInComputedFunc(path)) return;
+
+
+      const innerExpression = path.node.value.expression;
+
+      //  Prevent infinite loops
+      if (
+        t.isCallExpression(innerExpression) &&
+        t.isMemberExpression(innerExpression.callee) &&
+        t.isIdentifier(innerExpression.callee.object, { name: "Cosmq" }) &&
+        t.isIdentifier(innerExpression.callee.property, { name: "compute" })
+      ) {
+        return;
+      }
+
+      if (
+        innerExpression.type === "CallExpression" &&
+        (innerExpression.callee.name === "compute" || innerExpression.callee.name === "$")
+      ) {
+        return;
+      }
+      if (innerExpression.type === "ArrowFunctionExpression" || innerExpression.type === "CallExpression") {
+        return
+      }
+      if (innerExpression.type === "Identifier")
+        return
+
+
+      const observables = [
+        ...query.findNestedObservables(path),
+        ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
+        // ...query.findNestedIdentifiers(path, assert.isImportIdentifier), // assume imports are observables
+      ].map((p) => p.node);
+
+      if (observables.length === 0) {
+        return;
+      }
+
+      const callee = t.memberExpression(
+        t.identifier("Cosmq"),
+        t.identifier("compute")
+      );
+
+      const arrowFunc = t.arrowFunctionExpression(
+        [],
+        t.blockStatement([
+          t.returnStatement(innerExpression)
+        ])
+      );
+
+      const depArray = t.arrayExpression(observables);
+      const callExpression = t.callExpression(callee, [arrowFunc, depArray]);
+      path.node.value.expression = callExpression;
+
+
+      t.addComment(callExpression, "leading", "COSMQ - Injected Computed wrapper", false);
+
+      path.traverse({
+        CallExpression(p) {
+          if (callExpression === p.node) {
+            return
+          }
+
+          // Removes inner computed calles
+          if (assert.isWrappedInComputedFunc(p) || true) {
+            const callbackArg = p.node.arguments[0];
+
+
+            if (callbackArg && (callbackArg.type === 'ArrowFunctionExpression' || callbackArg.type === 'FunctionExpression')) {
+              const functionBody = callbackArg.body;
+
+              if (functionBody.type === 'BlockStatement') {
+                const returnStmt = functionBody.body.find(st => st.type === 'ReturnStatement');
+                if (returnStmt && returnStmt.argument) {
+                  p.replaceWith(returnStmt.argument);
+                  t.addComment(returnStmt.argument, "leading", "COSMQ - Removed Nested Compute 1", false);
+
+                }
+              }
+              else {
+                p.replaceWith(functionBody);
+                t.addComment(functionBody, "leading", "COSMQ - Removed Nested Compute 2", false);
+              }
+            } else if (callbackArg) {
+              if (callbackArg.type !== "ConditionalExpression") return
+
+
+              if (p.node.type === "CallExpression" && p.node.callee.name === "compute") {
+                p.replaceWith(callbackArg);
+                t.addComment(callbackArg, "leading", "COSMQ - Removed Nested Compute 3", false);
+              }
+
+
+            }
+          }
+
+        }
+      });
+    } else if (
+      (path.parent && path.parent.type === "VariableDeclarator") ||
+      (path.parent.type === "JSXExpressionContainer" &&
+        path.node.type !== "CallExpression")
+    ) {
+      if (path.parent && path.parent.type === "VariableDeclarator") {
+        const componentRoot = query.findComponentRoot(path);
+        if (componentRoot && componentRoot !== query.findFunctionRoot(path)) {
+          return;
+        }
+      }
+
+      const observables = [
+        ...query.findNestedObservables(path),
+        ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
+        // ...query.findNestedIdentifiers(path, assert.isImportIdentifier), // assume imports are observables
+      ].map((p) => p.node);
+
+      if (observables.length) {
+        const callee = t.memberExpression(
+          t.identifier("Cosmq"),
+          t.identifier("compute"),
+        );
+
+        const depArray = t.arrayExpression(observables);
+        const arrowFunc = t.ArrowFunctionExpression([], path.node);
+        const callExpression = t.callExpression(callee, [arrowFunc, depArray]);
+        path.replaceWith(callExpression, path.node);
+      }
+    }
+  };
+
+  const transformPropGetter = (path) => {
+    const callee = t.memberExpression(
+      t.identifier("Cosmq"),
+      t.identifier("getPropValue"),
+    );
+
+    const callExpression = t.callExpression(callee, [path.node]);
+    path.replaceWith(callExpression);
+  };
+
+  function isObservableRef(path) {
+    if (path.node.type !== "Identifier") return false;
+    const name = path.node.name;
+    const binding = query.getObservableBinding(path, name);
+
+    if (binding) {
+      const isRef = binding.referencePaths.find((p) => p === path);
+      if (isRef) return true;
+    }
+
+    return false;
+  }
+
+
+  const transformJSXElement = (path, inner = false) => {
     var openingElement = path.node.openingElement;
     var tagName = openingElement.name.name;
-    const isComponent = tagName[0] === tagName[0].toUpperCase();
     var reactIdentifier = t.identifier("Cosmq");
 
-    if (isComponent) {
+    // apply all other transformers before this one, otherwise causes side effects
+    path.traverse({
+      ...transformGroup
+    });
+
+    if (tagName === "ReactiveList") {
+      const fnName = "reactiveList";
+
+      let data = null;
+      let key = null;
+      let children = t.arrayExpression([]);
+      let body = null
+      const openingEl = path.node.openingElement
+
+
+      if (!path.node.children || path.node.children.length === 0) throw new Error("Missing children in ReactiveList")
+      path.node.children.forEach(child => {
+        if (child.type === "JSXText") return
+
+        if (child.type === "JSXExpressionContainer" && child.expression.type === "ArrowFunctionExpression") {
+          body = child.expression
+        } else {
+          throw new Error("Expexted a arrow function expression as a child of ReactiveList")
+        }
+      })
+
+      if (!openingEl.attributes || !openingEl.attributes.length) throw new Error("Missing data attribute in ReactiveList")
+
+      openingEl.attributes.forEach((attr) => {
+        if (attr.type === "JSXSpreadAttribute") {
+          throw new Error("Spread attributes are not supported in ReactiveList");
+        }
+
+        if (attr.name.name === "data") {
+          data = attr.value.expression
+        }
+
+        if (attr.name.name === "key" && attr.value.type === "JSXExpressionContainer") {
+          key = attr.value.expression
+        }
+      });
+
+      path.traverse({
+        JSXElement: (path) => transformJSXElement(path, true),
+      });
+
+
+      if (!key) {
+        throw new Error("Missing required prop 'key' in ReactiveList")
+      }
+
+      if (!data) {
+        throw new Error("Missing required prop 'data' in ReactiveList")
+      }
+
+      if (!body) {
+        throw new Error("Missing required child in ReactiveList")
+      }
+
+      if (body.type !== "ArrowFunctionExpression") throw new Error("Invalid body type in ReactiveList")
+      body = t.arrowFunctionExpression(body.params, body.body)
+
+      const callee = t.memberExpression(reactIdentifier, t.identifier(fnName));
+      const callExpression = t.callExpression(callee, [
+        data,
+        t.objectExpression([t.objectProperty(t.identifier("getKey"), key)]),
+        body,
+      ]);
+
+
+      path.replaceWith(callExpression, path.node)
+    }
+
+    else if (tagName[0] === tagName[0].toUpperCase()) {
+
       const componentName = tagName.replace(/^Component_/, "");
       const componentDeclarationName = `Component_${componentName}`;
 
@@ -207,7 +321,7 @@ exports.default = function (babel) {
       var callExpression = t.callExpression(callee, [
         t.stringLiteral(componentName),
         t.identifier(isDeclaredInFile ? componentDeclarationName : tagName),
-        getProperties(path, true),
+        utils.getJSXProperties(t, path, true),
       ]);
 
       path.replaceWith(callExpression, path.node);
@@ -218,13 +332,13 @@ exports.default = function (babel) {
       const fnName = "registerElement";
 
       path.traverse({
-        JSXElement: (path) => transformJSX(path, true),
+        JSXElement: (path) => transformJSXElement(path, true),
       });
 
       const callee = t.memberExpression(reactIdentifier, t.identifier(fnName));
       const callExpression = t.callExpression(callee, [
         t.stringLiteral(tagName),
-        getProperties(path),
+        utils.getJSXProperties(t, path),
         children,
       ]);
 
@@ -253,7 +367,7 @@ exports.default = function (babel) {
   };
 
   const transformIdentifier = (path) => {
-    // if (isImportIdentifier(path)) {
+    // if (assert.isImportIdentifier(path)) {
     //   if (assert.isWrappedInPropertyValueGetter(path)) return;
     //   if (assert.isIdentifierInDeps(path)) return;
 
@@ -263,7 +377,7 @@ exports.default = function (babel) {
     //   if (assert.isIdentifierInJSXAttribute(path)) return;
     //   if (assert.isObservableAccessed(path)) return;
     //   if (assert.isObservableAssignment(path)) return;
-    //   if (assert.isObservableArrayData(path)) return;
+    //   if (assert.isReactiveListData(path)) return;
 
     //   transformPropGetter(path);
     // }
@@ -272,13 +386,12 @@ exports.default = function (babel) {
     if (isPropIdentifier(path)) {
       if (assert.isWrappedInPropertyValueGetter(path)) return;
       if (assert.isIdentifierInDeps(path)) return;
-
       if (assert.isIdentifierInDeps(path)) return;
       if (assert.isInComponentProps(path)) return;
       if (assert.isIdentifierInJSXAttribute(path)) return;
       if (assert.isObservableAccessed(path)) return;
       if (assert.isObservableAssignment(path)) return;
-      if (assert.isObservableArrayData(path)) return;
+      if (assert.isReactiveListData(path)) return;
       if (assert.isWrappedInObserveFunc(path)) return;
 
       transformPropGetter(path);
@@ -288,7 +401,7 @@ exports.default = function (babel) {
       if (assert.isIdentifierInJSXAttribute(path)) return;
       if (assert.isObservableAccessed(path)) return;
       if (assert.isObservableAssignment(path)) return;
-      if (assert.isObservableArrayData(path)) return;
+      if (assert.isReactiveListData(path)) return;
       if (path.parent && path.parent.type === "ReturnStatement") return;
       if (assert.isWrappedInObserveFunc(path)) return;
 
@@ -302,48 +415,25 @@ exports.default = function (babel) {
     }
   };
 
-  function extractMemberExpressionString(node) {
-    if (!node) return "";
-
-    // If it's an ExpressionStatement, get the actual expression
-    if (node.type === "ExpressionStatement") {
-      node = node.expression; // Unwrap ExpressionStatement
+  const transformCallee = (path, callee, from, to) => {
+    if (callee.type === "Identifier") {
+      const binding = path.scope.getBinding(callee.name);
+      if (!binding && callee.name == from) {
+        callee.name = to;
+        return;
+      }
     }
 
-    // Handle AssignmentExpression (e.g., `testing5 = 2`)
-    if (node.type === "AssignmentExpression") {
-      return getMemberExpressionString(node.left);
+    if (callee.type === "MemberExpression") {
+      if (callee.type === "MemberExpression") {
+        if (callee.property.name === from) {
+          callee.property.name = to
+          return
+        }
+      }
     }
 
-    // Handle function calls (e.g., `test.testing1.testing2.something()`)
-    if (node.type === "CallExpression") {
-      return getMemberExpressionString(node.callee); // Extract the function being called
-    }
-
-    return getMemberExpressionString(node);
-  }
-
-  function getMemberExpressionString(node) {
-    if (!node) return "";
-
-    if (node.type === "Identifier") {
-      return node.name;
-    } else if (node.type === "ThisExpression") {
-      return "this";
-    } else if (node.type === "MemberExpression") {
-      let objectStr = getMemberExpressionString(node.object);
-      let propertyStr = node.computed
-        ? `[${getMemberExpressionString(node.property)}]` // Bracket notation
-        : `.${getMemberExpressionString(node.property)}`; // Dot notation
-      return `${objectStr}${propertyStr}`;
-    } else if (node.type === "StringLiteral") {
-      return `"${node.value}"`; // Handles obj["stringKey"]
-    } else if (node.type === "NumericLiteral") {
-      return node.value; // Handles arr[0]
-    }
-
-    console.error("Unexpected node type:", node.type);
-    return "";
+    throw new Error(`Unhandled callee transformation ${callee.type}`)
   }
 
   const transformCallExpression = (path) => {
@@ -356,6 +446,10 @@ exports.default = function (babel) {
           ? t.arrowFunctionExpression([], path.node.arguments[0])
           : path.node.arguments[0];
 
+      if (assert.isComputeAliasModuleMethod(path)) {
+        transformCallee(path, path.node.callee, "$", "compute")
+      }
+
       // transforms shorthand methods to include deps, if not provided
       if (path.node.arguments[1] == null) {
         const observables = {};
@@ -363,7 +457,7 @@ exports.default = function (babel) {
         const list = [
           ...query.findNestedObservables(path),
           ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
-          // ...query.findNestedIdentifiers(path, isImportIdentifier), // assume imports are observables
+          // ...query.findNestedIdentifiers(path, assert.isImportIdentifier), // assume imports are observables
         ];
 
         list.forEach((obsPath) => {
@@ -389,85 +483,6 @@ exports.default = function (babel) {
           observables[obsPath.node.name] = obsPath.node;
         });
 
-        // const nonObs = query.findNestedIdentifiers(path, (p, found) => {
-        //   if (observables[p.node.name]) return false;
-
-        //   // observables[p.node.name] = p.node;
-        //   utils.findNearestAncestor(p, (a) => {
-        //     if (!a || !a.node) return;
-
-        //     // if (a.node.type === "ExpressionStatement") {
-
-        //     //   if (a.node.expression.type === "CallExpression" && a.node.expression.callee && a.node.expression.callee.object) {
-        //     //     const str = extractMemberExpressionString(a.node.expression.callee.object)
-        //     //     if (str != "") {
-        //     //       console.log("call", str)
-        //     //       observables[str] = a.node.expression.callee.object
-        //     //     }
-
-        //     //   } else if (a.node.expression.type === "MemberExpression") {
-        //     //     const str = extractMemberExpressionString(a.node.expression)
-        //     //     if (str != "") {
-        //     //       observables[str] = a.node.expression
-        //     //       console.log("exp", str)
-        //     //     }
-
-        //     //   }
-        //     // }
-
-        //     if (a.node.type === "ExpressionStatement") {
-
-        //       a.traverse({
-        //         MemberExpression: (mPath) => {
-        //           if (mPath.parent.type === "CallExpression" && mPath.parent.type === "MemberExpression") return;
-        //           if (mPath.node.computed) return;
-
-        //           let initializedInComputed = false
-        //           let computedExpression = false;
-
-        //           mPath.traverse({
-        //             MemberExpression: (p) => {
-        //               if (mPath.node.computed) computedExpression = true;
-        //             },
-        //             Identifier: (p => {
-        //               const binding = query.getRootBoundNode(p, p.node.name);
-        //               if (!binding) return;
-
-        //               if (binding.scope.block === body) {
-        //                 initializedInComputed = true
-        //               }
-
-        //             })
-        //           })
-
-        //           if (computedExpression || initializedInComputed) return;
-
-        //           console.log("test", extractMemberExpressionString(mPath.node))
-        //           const str = extractMemberExpressionString(mPath.node)
-        //           if (str != "") {
-        //             observables[str] = mPath.node
-        //           }
-        //         }
-        //       });
-
-        //       // const node = a.node.expression
-        //       // console.log(a.node)
-
-        //       // if (node.type === "MemberExpression") {
-        //       //   console.log(node.type)
-        //       //   const str = extractMemberExpressionString(node)
-        //       //   if (str != "") {
-        //       //     observables[str] = node
-        //       //     console.log("exp", str)
-        //       //   }
-
-        //       // }
-
-        //     }
-        //   })
-
-        // });
-
         const deps = t.arrayExpression(Object.values(observables));
 
         path.node.arguments = [body, deps];
@@ -477,113 +492,104 @@ exports.default = function (babel) {
     }
   };
 
+  const transformJSXText = (path) => {
+    // remove Blank JSXText
+    if (path.node.value.replace(/\n|\r\n|\s/gi, "").length === 0) {
+      path.remove();
+    } else {
+      path.replaceWith(t.stringLiteral(path.node.value));
+    }
+  }
+
+
+  const transformJSXExpressionContainer = (path) => {
+    if (assert.isModuleMethod(path, "compute", path.node.expression)) {
+      const component = query.findComponentRoot(path);
+      if (!component) return;
+
+      const block = query.findComponentBlockStatement(path);
+      if (!block) throw new Error("Failed to find component block");
+
+      const returnIndex = block.node.body.findIndex(
+        (n) => n.type === "ReturnStatement",
+      );
+
+      if (returnIndex !== -1) {
+        return path.replaceWith(path.node.expression);
+        // prevent hoisting computed funcs
+
+        hoistCount++;
+        const name = `computed__ref_${hoistCount}`;
+
+        const hoisted = t.variableDeclaration("const", [
+          t.variableDeclarator(t.identifier(name), path.node.expression),
+        ]);
+
+        let index = returnIndex;
+
+        // has to traverse block to apply transformations on the recently hoisted variable,
+        // in-case there's JSXElements deeply nested in the expression
+        block.traverse({
+          ...transformGroup,
+          JSXExpressionContainer(p) {
+            p.replaceWith(p.node.expression);
+          },
+        });
+
+        path.replaceWith(t.jsxExpressionContainer(t.identifier(name)));
+
+        const parentVariable = query.findParentVariableDeclarator(path);
+
+        if (parentVariable) {
+          const matchedIndex = block.node.body.findIndex((n) => {
+            if (n.type === "VariableDeclaration") {
+              if (
+                n.declarations.find(
+                  (dec) =>
+                    dec.id && dec.id.name === parentVariable.node.id.name,
+                )
+              ) {
+                return true;
+              }
+            }
+          });
+
+          if (matchedIndex != -1) {
+            // if referenced inside a variable, move the hoisted index before that variable
+            index = matchedIndex;
+          }
+        }
+
+        block.node.body = [
+          ...block.node.body.slice(0, index),
+          hoisted,
+          ...block.node.body.slice(index, block.node.body.length),
+        ];
+      }
+    } else path.replaceWith(path.node.expression);
+  }
+
+  const transformGroup = {
+    Identifier: transformIdentifier,
+    CallExpression: transformCallExpression,
+    ConditionalExpression: transformComputed,
+    BinaryExpression: transformComputed,
+    LogicalExpression: transformComputed,
+    TemplateLiteral: transformComputed,
+    AssignmentExpression: transformAssignment,
+    JSXAttribute: transformComputed,
+    JSXElement: transformJSXElement,
+    JSXText: transformJSXText,
+  }
+
   return {
     name: "custom-jsx-plugin",
     manipulateOptions: function manipulateOptions(opts, parserOpts) {
       parserOpts.plugins.push("jsx");
     },
     visitor: {
-      JSXExpressionContainer(path) {
-        if (assert.isModuleMethod(path, "compute", path.node.expression)) {
-          const component = query.findComponentRoot(path);
-          if (!component) return;
-
-          const block = query.findComponentBlockStatement(path);
-          if (!block) throw new Error("Failed to find component block");
-
-          const returnIndex = block.node.body.findIndex(
-            (n) => n.type === "ReturnStatement",
-          );
-
-          if (returnIndex !== -1) {
-            return path.replaceWith(path.node.expression);
-            // prevent hoisting
-
-            hoistCount++;
-            const name = `computed__ref_${hoistCount}`;
-
-            const hoisted = t.variableDeclaration("const", [
-              t.variableDeclarator(t.identifier(name), path.node.expression),
-            ]);
-
-            let index = returnIndex;
-
-            // has to traverse block to apply transformations on the recently hoisted variable,
-            // in-case there's JSXElements deeply nested in the expression
-            block.traverse({
-              Identifier: transformIdentifier,
-              CallExpression: transformCallExpression,
-              ConditionalExpression: transformComputed,
-              BinaryExpression: transformComputed,
-              LogicalExpression: transformComputed,
-              TemplateLiteral: transformComputed,
-              AssignmentExpression: transformAssignment,
-              JSXElement: transformJSX,
-              JSXExpressionContainer(p) {
-                p.replaceWith(p.node.expression);
-              },
-            });
-
-            path.replaceWith(t.jsxExpressionContainer(t.identifier(name)));
-
-            const parentVariable = query.findParentVariableDeclarator(path);
-
-            if (parentVariable) {
-              const matchedIndex = block.node.body.findIndex((n) => {
-                if (n.type === "VariableDeclaration") {
-                  if (
-                    n.declarations.find(
-                      (dec) =>
-                        dec.id && dec.id.name === parentVariable.node.id.name,
-                    )
-                  ) {
-                    return true;
-                  }
-                }
-              });
-
-              if (matchedIndex != -1) {
-                // if referenced inside a variable, move the hoisted index before that variable
-                index = matchedIndex;
-              }
-            }
-
-            block.node.body = [
-              ...block.node.body.slice(0, index),
-              hoisted,
-              ...block.node.body.slice(index, block.node.body.length),
-            ];
-          }
-        } else path.replaceWith(path.node.expression);
-      },
-      JSXText(path) {
-        // remove Blank JSXText
-        if (path.node.value.replace(/\n|\r\n|\s/gi, "").length === 0) {
-          path.remove();
-        } else {
-          path.replaceWith(t.stringLiteral(path.node.value));
-        }
-      },
-      JSXElement(path) {
-        path.traverse({
-          Identifier: transformIdentifier,
-          CallExpression: transformCallExpression,
-          ConditionalExpression: transformComputed,
-          BinaryExpression: transformComputed,
-          LogicalExpression: transformComputed,
-          TemplateLiteral: transformComputed,
-          AssignmentExpression: transformAssignment,
-        });
-
-        transformJSX(path);
-      },
-      CallExpression: transformCallExpression,
-      Identifier: transformIdentifier,
-      ConditionalExpression: transformComputed,
-      BinaryExpression: transformComputed,
-      LogicalExpression: transformComputed,
-      TemplateLiteral: transformComputed,
-      AssignmentExpression: transformAssignment,
+      ...transformGroup,
+      JSXExpressionContainer: transformJSXExpressionContainer
     },
   };
 };

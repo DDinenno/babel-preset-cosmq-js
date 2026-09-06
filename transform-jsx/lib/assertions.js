@@ -1,8 +1,8 @@
 const { findNearestAncestor } = require("./utils");
 
 function matchParentRecursively(path, matcher) {
-  if (!path) return false;
-  if (matcher(path)) return true;
+  if (!path || !path.parentPath) return false;
+  if (matcher(path.parentPath)) return true;
   return matchParentRecursively(path.parentPath, matcher);
 }
 
@@ -22,8 +22,24 @@ function isCalleeModuleMethod(node, property) {
   return false;
 }
 
-function isModuleMethod(path, name, _node = null) {
+function isComputeModuleMethod(path, _node = null) {
+  return isModuleMethod(path, "compute", _node) || isModuleMethod(path, "$", _node)
+}
+
+function isComputeAliasModuleMethod(path, _node = null) {
+  return isModuleMethod(path, "$", _node)
+}
+
+function isModuleMethod(path, methodName, _node = null) {
   if (!path || !path.node) return;
+
+  const names = [];
+  if (methodName === "compute") {
+    // also asserts for compute alias
+    names.push("compute", "$");
+  } else {
+    names.push(methodName);
+  }
 
   const node = _node || path.node;
   if (!node) throw new Error("Node isn't found!");
@@ -33,14 +49,14 @@ function isModuleMethod(path, name, _node = null) {
 
     if (callee.type === "Identifier") {
       const binding = path.scope.getBinding(callee.name);
-      if (!binding && callee.name === name) return true;
+      if (!binding && names.includes(callee.name)) return true;
 
       if (binding && binding.kind === "module") {
         // checks to see if matches with a named import, regardless of it being mapped to a new identifier
         return (
           binding.path.type === "ImportSpecifier" &&
           binding.path.parentPath.node.source.value === "cosmq-js" &&
-          binding.path.node.imported.name === name &&
+          names.includes(binding.path.node.imported.name) &&
           binding.path.node.local.name === callee.name
         );
       }
@@ -49,7 +65,7 @@ function isModuleMethod(path, name, _node = null) {
     if (callee.type === "MemberExpression") {
       if (callee.type === "MemberExpression") {
         if (callee.object.name === "Cosmq") {
-          return callee.property.name === name;
+          return names.includes(callee.property.name);
         }
       }
     }
@@ -105,7 +121,7 @@ function bodyContainsContext(path) {
 }
 
 function isWrappedInComputedFunc(path) {
-  return matchParentRecursively(path, (p) => isModuleMethod(p, "compute"));
+  return matchParentRecursively(path, (p) => isComputeModuleMethod(p));
 }
 
 function isWrappedInEffectFunc(path) {
@@ -237,21 +253,46 @@ function isEntityShorthand(path, name) {
     return true;
 }
 
-function isInObservableArray(path) {
+function isInReactiveList(path) {
   return matchParentRecursively(path, (p) =>
-    isModuleMethod(p, "observableArray")
+    isModuleMethod(p, "reactiveList")
   );
 }
 
-function isObservableArrayData(path) {
+function isReactiveListData(path) {
   return (
-    isModuleMethod(path.parentPath, "observableArray") &&
+    isModuleMethod(path.parentPath, "reactiveList") &&
     Array.isArray(path.container) &&
     path.container[0] === path.node
   );
 }
 
+function isImportIdentifier(path) {
+  if (
+    path.parent &&
+    (path.parent.type === "ImportSpecifier" ||
+      path.parent.type === "ImportDefaultSpecifier")
+  )
+    return false;
+  const binding = query.getRootBoundNode(path, path.node.name);
+  if (binding && binding.kind === "module") {
+    if (
+      binding.path &&
+      binding.path.parentPath &&
+      binding.path.parentPath.node &&
+      binding.path.parentPath.node.source &&
+      binding.path.parentPath.node.source.value === "cosmq-js"
+    )
+      return false;
+    return true;
+  }
+  return false;
+}
+
+
+
 module.exports = {
+  isImportIdentifier,
   isWrappedInConditionalStatement,
   isInConditionalCondition,
   isWrappedInComputedFunc,
@@ -271,12 +312,14 @@ module.exports = {
   isWrappedInSetter,
   isWrappedInObserveFunc,
   isModuleMethod,
+  isComputeModuleMethod,
+  isComputeAliasModuleMethod,
   isIdentifierInDeps,
   isInnerFunction,
   isIdentifierInJSXAttribute,
   isObservableAccessed,
   isObservableAssignment,
-  isInObservableArray,
+  isInReactiveList,
   isEntityShorthand,
-  isObservableArrayData,
+  isReactiveListData,
 };
