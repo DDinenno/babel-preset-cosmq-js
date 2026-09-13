@@ -1,0 +1,116 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`transform-jsx-conditional 1. transforms simple IF conditional in JSX: 1. transforms simple IF conditional in JSX 1`] = `
+
+const show = true; <div>{IF(show)(<span>Visible</span>)}</div>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const show = true;
+<div>{Cosmq.conditional([show], [{
+    "__condition__": () => show,
+    "body": () => (<span>Visible</span>)
+  }])}</div>;
+
+`;
+
+exports[`transform-jsx-conditional 2. transforms IF and ELSE conditional: 2. transforms IF and ELSE conditional 1`] = `
+
+
+const isLoggedIn = false;
+<div>
+  {IF(isLoggedIn)(<span>Welcome back!</span>)}
+  {ELSE()(<span>Please log in.</span>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const isLoggedIn = false;
+<div>{Cosmq.conditional([isLoggedIn], [{
+    "__condition__": () => isLoggedIn,
+    "body": () => (<span>Welcome back!</span>)
+  }, {
+    "__condition__": () => true,
+    "body": () => (<span>Please log in.</span>)
+  }])}</div>;
+
+`;
+
+exports[`transform-jsx-conditional 3. transforms IF, ELSEIF, and ELSE conditional chain: 3. transforms IF, ELSEIF, and ELSE conditional chain 1`] = `
+
+
+const status = "loading";
+<div>
+  {IF(status === "loading")(<span>Loading...</span>)}
+  {ELSEIF(status === "error")(<span>Error occurred!</span>)}
+  {ELSE()(<span>Ready</span>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const status = "loading";
+<div>{Cosmq.conditional([status], [{
+    "__condition__": () => status === "loading",
+    "body": () => (<span>Loading...</span>)
+  }, {
+    "__condition__": () => status === "error",
+    "body": () => (<span>Error occurred!</span>)
+  }, {
+    "__condition__": () => true,
+    "body": () => (<span>Ready</span>)
+  }])}</div>;
+
+`;
+
+exports[`transform-jsx-conditional 4. collects multiple observable dependencies in condition: 4. collects multiple observable dependencies in condition 1`] = `
+
+
+const isReady = true;
+const count = 5;
+<div>
+  {IF(isReady && count > 0)(<div>Active with items</div>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const isReady = true;
+const count = 5;
+<div>{Cosmq.conditional([isReady, count], [{
+    "__condition__": () => isReady && count > 0,
+    "body": () => (<div>Active with items</div>)
+  }])}</div>;
+
+`;
+
+exports[`transform-jsx-conditional 5. handles multiple independent conditional blocks in same element: 5. handles multiple independent conditional blocks in same element 1`] = `
+
+
+const a = true;
+const b = false;
+<div>
+  {IF(a)(<span>A</span>)}
+  <hr />
+  {IF(b)(<span>B</span>)}
+  {ELSE()(<span>Not B</span>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const a = true;
+const b = false;
+<div>{Cosmq.conditional([a], [{
+    "__condition__": () => a,
+    "body": () => (<span>A</span>)
+  }])}<hr />{Cosmq.conditional([b], [{
+    "__condition__": () => b,
+    "body": () => (<span>B</span>)
+  }, {
+    "__condition__": () => true,
+    "body": () => (<span>Not B</span>)
+  }])}</div>;
+
+`;

@@ -1,0 +1,661 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`transform-jsx 1. transforms basic native element: 1. transforms basic native element 1`] = `
+
+const el = <div>Hello World</div>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.registerElement("div", {}, ["Hello World"]);
+
+`;
+
+exports[`transform-jsx 2. transforms nested native elements and strips blank whitespace: 2. transforms nested native elements and strips blank whitespace 1`] = `
+
+
+const el = (
+  <div className="container">
+    <h1>Title</h1>
+    <p>Description</p>
+  </div>
+);
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.registerElement("div", {
+  "className": "container"
+}, [Cosmq.registerElement("h1", {}, ["Title"]), Cosmq.registerElement("p", {}, ["Description"])]);
+
+`;
+
+exports[`transform-jsx 3. transforms elements with self-closing tags and boolean attributes: 3. transforms elements with self-closing tags and boolean attributes 1`] = `
+
+const el = <input type="text" disabled required readOnly />;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.registerElement("input", {
+  "type": "text",
+  "disabled": true,
+  "required": true,
+  "readOnly": true
+}, []);
+
+`;
+
+exports[`transform-jsx 4. transforms handle: namespaced event handlers: 4. transforms handle: namespaced event handlers 1`] = `
+
+const el = <button handle:click={handleClick} handle:input={handleInput}>Submit</button>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.registerElement("button", {
+  "handle:click": handleClick,
+  "handle:input": handleInput
+}, ["Submit"]);
+
+`;
+
+exports[`transform-jsx 5. transforms style attribute object: 5. transforms style attribute object 1`] = `
+
+const el = <div style={{ color: "red", marginTop: "10px" }}>Styled</div>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.registerElement("div", {
+  "style": {
+    color: "red",
+    marginTop: "10px"
+  }
+}, ["Styled"]);
+
+`;
+
+exports[`transform-jsx 6. transforms custom component with Capitalized tag: 6. transforms custom component with Capitalized tag 1`] = `
+
+const el = <CustomButton size="large" variant="primary">Click</CustomButton>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.registerComponent("CustomButton", CustomButton, {
+  "size": "large",
+  "variant": "primary",
+  "children": ["Click"]
+});
+
+`;
+
+exports[`transform-jsx 7. resolves component tag to local Component_ declaration: 7. resolves component tag to local Component_ declaration 1`] = `
+
+
+const Component_Project = ({ item }) => <div>{item}</div>;
+const el = <Project item="Cosmq" />;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Project = ({
+  item
+}) => Cosmq.registerElement("div", {}, [item]);
+const el = Cosmq.registerComponent("Project", Component_Project, {
+  "item": "Cosmq",
+  "children": []
+});
+
+`;
+
+exports[`transform-jsx 8. transforms component passing children to children property: 8. transforms component passing children to children property 1`] = `
+
+
+const el = (
+  <Card title="Overview">
+    <Button>Close</Button>
+  </Card>
+);
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.registerComponent("Card", Card, {
+  "title": "Overview",
+  "children": [Cosmq.registerComponent("Button", Button, {
+    "children": ["Close"]
+  })]
+});
+
+`;
+
+exports[`transform-jsx 9. handles function declaration for Component_: 9. handles function declaration for Component_ 1`] = `
+
+
+function Component_Header({ title }) {
+  return <h1>{title}</h1>;
+}
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+function Component_Header({
+  title
+}) {
+  return Cosmq.registerElement("h1", {}, [title]);
+}
+
+`;
+
+exports[`transform-jsx 10. transforms ReactiveList with key, data, and render function: 10. transforms ReactiveList with key, data, and render function 1`] = `
+
+
+const el = (
+  <ReactiveList data={items} key={(item) => item.id}>
+    {(item, i) => (
+      <li key={item.id}>
+        <span>{item.name}</span>
+      </li>
+    )}
+  </ReactiveList>
+);
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const el = Cosmq.reactiveList(items, {
+  getKey: item => item.id
+}, (item, i) => Cosmq.registerElement("li", {
+  "key": item.id
+}, [Cosmq.registerElement("span", {}, [item.name])]));
+
+`;
+
+exports[`transform-jsx 11. does not rewrite data observable to .value inside ReactiveList prop: 11. does not rewrite data observable to .value inside ReactiveList prop 1`] = `
+
+
+const Component_TodoList = () => {
+  const items = observe([]);
+  return (
+    <ReactiveList data={items} key={(item) => item.id}>
+      {(item) => <div>{item.name}</div>}
+    </ReactiveList>
+  );
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_TodoList = () => {
+  const items = observe([]);
+  return Cosmq.reactiveList(items, {
+    getKey: item => item.id
+  }, item => Cosmq.registerElement("div", {}, [item.name]));
+};
+
+`;
+
+exports[`transform-jsx 12. wraps observable binary expression in JSX container with Cosmq.compute: 12. wraps observable binary expression in JSX container with Cosmq.compute 1`] = `
+
+
+const Component_Counter = () => {
+  const count = observe(0);
+  return <div>{count + 1}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Counter = () => {
+  const count = observe(0);
+  return Cosmq.registerElement("div", {}, [Cosmq.compute(() => count.value + 1, [count])]);
+};
+
+`;
+
+exports[`transform-jsx 13. wraps observable template literal in JSX with Cosmq.compute: 13. wraps observable template literal in JSX with Cosmq.compute 1`] = `
+
+
+const Component_Greeting = () => {
+  const name = observe("World");
+  return <div>{\`Hello, \${name}!\`}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Greeting = () => {
+  const name = observe("World");
+  return Cosmq.registerElement("div", {}, [Cosmq.compute(() => \`Hello, \${name.value}!\`, [name])]);
+};
+
+`;
+
+exports[`transform-jsx 14. wraps dynamic JSX attribute dependent on observable with Cosmq.compute: 14. wraps dynamic JSX attribute dependent on observable with Cosmq.compute 1`] = `
+
+
+const Component_Card = () => {
+  const isActive = observe(true);
+  return <div className={isActive ? "active" : "inactive"}>Card</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Card = () => {
+  const isActive = observe(true);
+  return Cosmq.registerElement("div", {
+    "className": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return isActive.value ? "active" : "inactive";
+    }, [isActive])
+  }, ["Card"]);
+};
+
+`;
+
+exports[`transform-jsx 15. wraps logical expression in JSX container with Cosmq.compute: 15. wraps logical expression in JSX container with Cosmq.compute 1`] = `
+
+
+const Component_Gate = () => {
+  const hasItems = observe(true);
+  return <div>{hasItems && <span>Items available</span>}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Gate = () => {
+  const hasItems = observe(true);
+  return Cosmq.registerElement("div", {}, [Cosmq.compute(() => hasItems.value && Cosmq.registerElement("span", {}, ["Items available"]), [hasItems])]);
+};
+
+`;
+
+exports[`transform-jsx 16. wraps ternary expression in JSX container with Cosmq.compute: 16. wraps ternary expression in JSX container with Cosmq.compute 1`] = `
+
+
+const Component_Status = () => {
+  const isReady = observe(false);
+  return <div>{isReady ? <span>Ready</span> : <span>Waiting</span>}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Status = () => {
+  const isReady = observe(false);
+  return Cosmq.registerElement("div", {}, [Cosmq.compute(() => isReady.value ? Cosmq.registerElement("span", {}, ["Ready"]) : Cosmq.registerElement("span", {}, ["Waiting"]), [isReady])]);
+};
+
+`;
+
+exports[`transform-jsx 17. transforms reactive variable declaration containing observable to Cosmq.compute: 17. transforms reactive variable declaration containing observable to Cosmq.compute 1`] = `
+
+
+const Component_Derived = () => {
+  const count = observe(0);
+  const total = count + 10;
+  return <div>{total}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Derived = () => {
+  const count = observe(0);
+  const total = count.value + 10;
+  return Cosmq.registerElement("div", {}, [total]);
+};
+
+`;
+
+exports[`transform-jsx 18. transforms observable assignment to .set() method call: 18. transforms observable assignment to .set() method call 1`] = `
+
+
+const Component_Counter = () => {
+  const count = observe(0);
+  const inc = () => {
+    count = count + 1;
+  };
+  return <button handle:click={inc}>Increment</button>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Counter = () => {
+  const count = observe(0);
+  const inc = () => {
+    count.set(count.value + 1);
+  };
+  return Cosmq.registerElement("button", {
+    "handle:click": inc
+  }, ["Increment"]);
+};
+
+`;
+
+exports[`transform-jsx 19. transforms observable access to .value when read inside function: 19. transforms observable access to .value when read inside function 1`] = `
+
+
+const Component_Viewer = () => {
+  const text = observe("hello");
+  const log = () => {
+    console.log(text);
+  };
+  return <div>Viewer</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Viewer = () => {
+  const text = observe("hello");
+  const log = () => {
+    console.log(text.value);
+  };
+  return Cosmq.registerElement("div", {}, ["Viewer"]);
+};
+
+`;
+
+exports[`transform-jsx 20. does not transform observable to .value when returned directly: 20. does not transform observable to .value when returned directly 1`] = `
+
+
+const Component_Raw = () => {
+  const count = observe(10);
+  return count;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Raw = () => {
+  const count = observe(10);
+  return count;
+};
+
+`;
+
+exports[`transform-jsx 21. transforms destructured component props access to getPropValue: 21. transforms destructured component props access to getPropValue 1`] = `
+
+
+const Component_Header = ({ title }) => {
+  return <h1>{title}</h1>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Header = ({
+  title
+}) => {
+  return Cosmq.registerElement("h1", {}, [title]);
+};
+
+`;
+
+exports[`transform-jsx 22. transforms props destructured in function body to getPropValue: 22. transforms props destructured in function body to getPropValue 1`] = `
+
+
+const Component_Card = (props) => {
+  const { title } = props;
+  return <h1>{title}</h1>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Card = props => {
+  const {
+    title
+  } = props;
+  return Cosmq.registerElement("h1", {}, [Cosmq.getPropValue(title)]);
+};
+
+`;
+
+exports[`transform-jsx 23. treats component props as reactive dependencies in expressions: 23. treats component props as reactive dependencies in expressions 1`] = `
+
+
+const Component_Item = ({ count }) => {
+  return <div>{count + 1}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Item = ({
+  count
+}) => {
+  return Cosmq.registerElement("div", {}, [Cosmq.compute(() => Cosmq.getPropValue(count) + 1, [count])]);
+};
+
+`;
+
+exports[`transform-jsx 24. automatically infers dependencies for compute shorthand: 24. automatically infers dependencies for compute shorthand 1`] = `
+
+
+const Component_Stats = () => {
+  const a = observe(1);
+  const b = observe(2);
+  const sum = compute(() => a + b / b - a / 2);
+  return <div>{sum}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Stats = () => {
+  const a = observe(1);
+  const b = observe(2);
+  const sum = compute(() => a.value + b.value / b.value - a.value / 2, [a, b]);
+  return Cosmq.registerElement("div", {}, [sum]);
+};
+
+`;
+
+exports[`transform-jsx 25. preserves explicitly provided dependencies for compute: 25. preserves explicitly provided dependencies for compute 1`] = `
+
+
+const Component_ExplicitCompute = () => {
+  const a = observe(1);
+  const sum = compute(() => a * 2, [a]);
+  return <div>{sum}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_ExplicitCompute = () => {
+  const a = observe(1);
+  const sum = compute(() => a.value * 2, [a]);
+  return Cosmq.registerElement("div", {}, [sum]);
+};
+
+`;
+
+exports[`transform-jsx 26. automatically infers dependencies for effect shorthand: 26. automatically infers dependencies for effect shorthand 1`] = `
+
+
+const Component_EffectDemo = () => {
+  const count = observe(0);
+  effect(() => {
+    console.log(count);
+  });
+  return <div>Demo</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_EffectDemo = () => {
+  const count = observe(0);
+  effect(() => {
+    console.log(count.value);
+  }, [count]);
+  return Cosmq.registerElement("div", {}, ["Demo"]);
+};
+
+`;
+
+exports[`transform-jsx 27. preserves explicitly provided dependencies for effect: 27. preserves explicitly provided dependencies for effect 1`] = `
+
+
+const Component_ExplicitEffect = () => {
+  const count = observe(0);
+  effect(() => {
+    console.log(count);
+  }, [count]);
+  return <div>Demo</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_ExplicitEffect = () => {
+  const count = observe(0);
+  effect(() => {
+    console.log(count.value);
+  }, [count]);
+  return Cosmq.registerElement("div", {}, ["Demo"]);
+};
+
+`;
+
+exports[`transform-jsx 28. transforms $ shorthand alias to compute with dependencies: 28. transforms $ shorthand alias to compute with dependencies 1`] = `
+
+
+const Component_AliasDemo = () => {
+  const count = observe(5);
+  const doubled = $(() => count * 2);
+  return <div>{doubled}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_AliasDemo = () => {
+  const count = observe(5);
+  const doubled = compute(() => count.value * 2, [count]);
+  return Cosmq.registerElement("div", {}, [doubled]);
+};
+
+`;
+
+exports[`transform-jsx 29. removes nested compute inside JSX attribute: 29. removes nested compute inside JSX attribute 1`] = `
+
+
+const Component_Nested = () => {
+  const active = observe(true);
+  return <div className={compute(() => (active ? "active" : "inactive"))} />;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Nested = () => {
+  const active = observe(true);
+  return Cosmq.registerElement("div", {
+    "className": compute(() => active.value ? "active" : "inactive", [active])
+  }, []);
+};
+
+`;
+
+exports[`transform-jsx 30. define Context: 30. define Context 1`] = `
+
+
+const Store = createContext({
+    a: 1,
+    b: 2,
+    c: 0,
+    d: {a: 1},
+    e: [1, 2, 3],
+})
+
+const actionA = () => {
+    const c = store.a + store.b;
+    return c 
+}
+
+function actionB() {
+    const c = store.a + store.b;
+    return c 
+}
+
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Store = createContext({
+  a: 1,
+  b: 2,
+  c: 0,
+  d: {
+    a: 1
+  },
+  e: [1, 2, 3]
+});
+const actionA = () => {
+  const c = store.a + store.b;
+  return c;
+};
+function actionB() {
+  const c = store.a + store.b;
+  return c;
+}
+
+`;
+
+exports[`transform-jsx 31. import Context: 31. import Context 1`] = `
+
+
+const Component_SomeComponent = () => {
+  const ctx = loadContext()
+  const reassigned = ctx.c;
+  const test_compute = compute(ctx.a + ctx.b)
+
+  const handleMouseDown = () => {
+    ctx.c = ctx.a + ctx.b
+  }
+  
+  return (
+    <div 
+      handle:click={() => {
+        ctx.b = ctx.a / ctx.b;
+      }}
+      handle:mousedown={handleMouseDown}
+      style={{
+        opacity: ctx.b + ctx.a,
+        position: ctx.c
+      }}
+    >Hello World
+    </div>
+  )
+};
+
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_SomeComponent = () => {
+  const ctx = loadContext();
+  const __Cosmq_Context__ctx_b = ctx.b;
+  const __Cosmq_Context__ctx_a = ctx.a;
+  const __Cosmq_Context__ctx_c = ctx.c;
+  const reassigned = __Cosmq_Context__ctx_c;
+  const test_compute = compute(() => __Cosmq_Context__ctx_a.value + __Cosmq_Context__ctx_b.value, [__Cosmq_Context__ctx_a, __Cosmq_Context__ctx_b]);
+  const handleMouseDown = () => {
+    __Cosmq_Context__ctx_c.set(__Cosmq_Context__ctx_a.value + __Cosmq_Context__ctx_b.value);
+  };
+  return Cosmq.registerElement("div", {
+    "handle:click": () => {
+      __Cosmq_Context__ctx_b.set(__Cosmq_Context__ctx_a.value / __Cosmq_Context__ctx_b.value);
+    },
+    "handle:mousedown": handleMouseDown,
+    "style": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return {
+        opacity: __Cosmq_Context__ctx_b.value + __Cosmq_Context__ctx_a.value,
+        position: __Cosmq_Context__ctx_c.value
+      };
+    }, [__Cosmq_Context__ctx_b, __Cosmq_Context__ctx_a, __Cosmq_Context__ctx_c])
+  }, ["Hello World\\n    "]);
+};
+
+`;
