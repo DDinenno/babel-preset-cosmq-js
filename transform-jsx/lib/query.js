@@ -1,12 +1,7 @@
 const { CONTEXT_PREFIX } = require("../constants");
 const assert = require("./assertions");
-const utils = require("./utils")
 
-function findNearestAncestor(path, matcher) {
-  if (!path) return null;
-  if (matcher(path)) return path;
-  return findNearestAncestor(path.parentPath, matcher);
-}
+
 
 
 
@@ -204,7 +199,7 @@ function findComponentRoot(path) {
 
 function findComponentBlockStatement(path) {
   if (findComponentRoot(path))
-    return utils.findNearestAncestor(path, (p) => {
+    return path.find((p) => {
       if (p.node.type === "BlockStatement" && !assert.isInnerFunction(path))
         return true;
     });
@@ -213,7 +208,7 @@ function findComponentBlockStatement(path) {
 function findRootBlockStatement(path) {
   let block = null
 
-  utils.findNearestAncestor(path, (p) => {
+  path.find((p) => {
     if (p.node.type === "BlockStatement")
       block = p
   });
@@ -223,7 +218,7 @@ function findRootBlockStatement(path) {
 
 
 function findParentVariableDeclarator(path) {
-  return utils.findNearestAncestor(path, (p) => {
+  return path.find((p) => {
     if (p !== path && p.node.type === "VariableDeclarator") {
       return true;
     }
@@ -231,7 +226,6 @@ function findParentVariableDeclarator(path) {
 }
 
 module.exports = {
-  findNearestAncestor,
   getJSXProperties,
   getRootBoundNode,
   getContextVariableBinding,

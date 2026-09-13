@@ -1,5 +1,4 @@
 const { CONTEXT_PREFIX } = require("../constants");
-const { findNearestAncestor } = require("./utils");
 
 function matchParentRecursively(path, matcher) {
   if (!path || !path.parentPath) return false;
@@ -197,7 +196,7 @@ function isComponentFunction(path) {
 
 /** is in a function inside of a component */
 function isInnerFunction(path) {
-  const nearestFunction = findNearestAncestor(path, isFunction);
+  const nearestFunction = path.find(isFunction);
   if (!nearestFunction) return false;
   return !isComponentFunction(nearestFunction);
 }

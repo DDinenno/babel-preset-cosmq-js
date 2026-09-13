@@ -2,7 +2,6 @@
 const { CONTEXT_PREFIX } = require("./constants");
 const assert = require("./lib/assertions");
 const query = require("./lib/query");
-const utils = require("./lib/utils");
 const generate = require("@babel/generator").default;
 
 exports.__esModule = true;
