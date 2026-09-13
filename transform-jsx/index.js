@@ -1,7 +1,8 @@
 "use strict";
-const { CONTEXT_PREFIX } = require("./constants");
+const { CONTEXT_PREFIX } = require("./lib/constants");
 const assert = require("./lib/assertions");
 const query = require("./lib/query");
+const utils = require("./lib/utils");
 const generate = require("@babel/generator").default;
 
 exports.__esModule = true;
@@ -9,52 +10,6 @@ exports.__esModule = true;
 
 exports.default = function (babel) {
   const { types: t } = babel;
-  let hoistCount = 0;
-
-
-  function isPropIdentifier(path) {
-    const component = query.findComponentRoot(path);
-    if (!component) return;
-
-    const params = query.getFunctionParams(component);
-    if (!params || params.length === 0) return;
-
-    const isMember =
-      path.parentPath.type === "MemberExpression" &&
-      !path.parentPath.node.computed;
-    const bindingName = isMember
-      ? path.parentPath.node.object.name
-      : path.node.name;
-
-    const b = path.scope.getBinding(bindingName);
-    if (!b) return;
-
-    const isRef = b.referencePaths.find((rp) => rp === path);
-
-    if (b.path.node.type === "ObjectPattern" && b.path.node === params[0]) {
-      // prop is destructured within function param declaration
-      if (!isRef) return;
-      return true;
-    } else {
-      if (isMember) {
-        // prop is accessed as a member of the param
-        if (path.node.name === params[0].name) return;
-        if (b.identifier.name !== params[0].name) return;
-        return true;
-      } else {
-        // prop is destructured after param declaration, in the function body
-        if (path.parent.type === "ObjectProperty") return;
-        if (
-          b.path.node.type === "VariableDeclarator" &&
-          b.path.node.id.type === "ObjectPattern"
-        ) {
-          if (b.path.node.init.name === params[0].name) {
-            return true;
-          }
-        }
-      }
-    }
-  }
 
   const transformComputed = (path) => {
     if (assert.isInnerFunction(path)) return;
@@ -88,7 +43,7 @@ exports.default = function (babel) {
 
       const observables = [
         ...query.findNestedObservables(path),
-        ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
+        ...query.findNestedIdentifiers(path, utils.isPropIdentifier), // assume props are observables
         // ...query.findNestedIdentifiers(path, assert.isImportIdentifier), // assume imports are observables
       ].map((p) => p.node);
 
@@ -166,7 +121,7 @@ exports.default = function (babel) {
 
       const observables = [
         ...query.findNestedObservables(path),
-        ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
+        ...query.findNestedIdentifiers(path, utils.isPropIdentifier), // assume props are observables
         // ...query.findNestedIdentifiers(path, assert.isImportIdentifier), // assume imports are observables
       ].map((p) => p.node).filter(Boolean);
 
@@ -209,7 +164,6 @@ exports.default = function (babel) {
 
     return false;
   }
-
 
   const transformJSXElement = (path, inner = false) => {
     var openingElement = path.node.openingElement;
@@ -459,8 +413,6 @@ exports.default = function (babel) {
         });
       }
 
-
-
       if (decl.id.type === "Identifier") {
         const varName = decl.id.name;
         const binding = path.scope.getBinding(varName);
@@ -501,63 +453,10 @@ exports.default = function (babel) {
   }
 
 
-  const getContextIdentifierString = (path, prefix) => {
-    if (!path || !path.parent || path.parent.type !== "MemberExpression") return null
-    // if (path.parent.parent == null || path.parent.parent.type !== "MemberExpression") {
-
-    const binding = query.getContextVariableBinding(path, path.node.name);
-    if (!binding) return null
-
-    return `${prefix}${path.node.name}_${path.parentPath.node.property.name}`
-  }
-
   const transformIdentifier = (path) => {
-    // if (assert.isImportIdentifier(path)) {
-    //   if (assert.isWrappedInPropertyValueGetter(path)) return;
-    //   if (assert.isIdentifierInDeps(path)) return;
-
-    //   if (!assert.isInnerFunction(path)) return
-    //   if (assert.isIdentifierInDeps(path)) return;
-    //   // if (assert.isInComponentProps(path)) return;
-    //   if (assert.isIdentifierInJSXAttribute(path)) return;
-    //   if (assert.isObservableAccessed(path)) return;
-    //   if (assert.isObservableAssignment(path)) return;
-    //   if (assert.isReactiveListData(path)) return;
-
-    //   transformPropGetter(path);
-    // }
-    // else
-
-    // if (path.node.name === "__Context__store_a") {
-    //   const b = query.getRootBoundNode(path, path.node.name)
-    //   const init = b.path.node.init
-
-    //   console.log("__Context__store_a", !!b.path.node.init, !!query.getObservableBinding(path, path.node.name), !!query.getContextVariableBinding(path, path.node.name), path.parent && path.parent.type === "MemberExpression" && !!query.getContextVariableBinding(path, path.node.name))
-    //   console.log(assert.isModuleMethod(path, "loadContext", init),
-    //     assert.isModuleMethod(path, "createContext", init))
-    // }
-
-
-    // if (path.parent && path.parent.type === "MemberExpression" && query.getContextVariableBinding(path, path.node.name)) {
-    //   if (assert.isIdentifierInDeps(path)) return;
-    //   if (assert.isInComponentProps(path)) return;
-    //   if (assert.isIdentifierInJSXAttribute(path)) return;
-    //   if (assert.isObservableAccessed(path)) return;
-    //   if (assert.isObservableAssignment(path)) return;
-    //   if (assert.isReactiveListData(path)) return;
-    //   if (path.parent && path.parent.type === "ReturnStatement") return;
-    //   if (assert.isWrappedInObserveFunc(path)) return;
-
-    //   // Do nothing
-
-    // } 
-
     if (query.getObservableBinding(path, path.node.name)) {
-
-
       const excludeParentTypes = [
         "ReturnStatement",
-        // "MemberExpression",
         "VariableDeclarator",
         "RestElement",
         "JSXExpressionContainer"
@@ -578,10 +477,6 @@ exports.default = function (babel) {
       if (query.getContextVariableBinding(path, path.node.name)) {
 
         if (path.parent && path.parent.type === "AssignmentExpression") {
-          path.traverse({
-            AssignmentExpression: transformAssignment
-          })
-
           path.parentPath.replaceWith(
             t.callExpression(
               t.memberExpression(t.identifier(path.node.name), t.identifier("set")),
@@ -607,11 +502,7 @@ exports.default = function (babel) {
       const methodCall = t.expressionStatement(callee);
 
       path.replaceWith(methodCall);
-
-
-
-
-    } else if (isPropIdentifier(path)) {
+    } else if (utils.isPropIdentifier(path)) {
       if (assert.isWrappedInPropertyValueGetter(path)) return;
       if (assert.isIdentifierInDeps(path)) return;
       if (assert.isIdentifierInDeps(path)) return;
@@ -668,7 +559,7 @@ exports.default = function (babel) {
 
         const list = [
           ...query.findNestedObservables(path),
-          ...query.findNestedIdentifiers(path, isPropIdentifier), // assume props are observables
+          ...query.findNestedIdentifiers(path, utils.isPropIdentifier), // assume props are observables
           // ...query.findNestedIdentifiers(path, assert.isImportIdentifier), // assume imports are observables
         ];
 

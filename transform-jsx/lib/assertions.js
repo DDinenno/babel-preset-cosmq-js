@@ -1,5 +1,3 @@
-const { CONTEXT_PREFIX } = require("../constants");
-
 function matchParentRecursively(path, matcher) {
   if (!path || !path.parentPath) return false;
   if (matcher(path.parentPath)) return true;

@@ -1,8 +1,5 @@
-const { CONTEXT_PREFIX } = require("../constants");
+const { CONTEXT_PREFIX } = require("./constants");
 const assert = require("./assertions");
-
-
-
 
 
 function getJSXProperties(t, path, component = false) {
