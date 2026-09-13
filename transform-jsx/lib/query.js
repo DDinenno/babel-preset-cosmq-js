@@ -1,28 +1,138 @@
+const { CONTEXT_PREFIX } = require("../constants");
 const assert = require("./assertions");
-const utils = require("./utils");
+const utils = require("./utils")
+
+function findNearestAncestor(path, matcher) {
+  if (!path) return null;
+  if (matcher(path)) return path;
+  return findNearestAncestor(path.parentPath, matcher);
+}
+
+
+
+function getJSXProperties(t, path, component = false) {
+  const attrsObject = t.objectExpression([]);
+  const attributes = path.node.openingElement.attributes;
+  const properties = [];
+
+  function _mapPropertyValue(node) {
+    if (node == null) {
+      return t.booleanLiteral(true);
+    } else if (node.type === "JSXExpressionContainer") return node.expression;
+    else if (node.type === "JSXExpressionContainer") return node.expression;
+    return node;
+  }
+
+  attributes.forEach((attr) => {
+    let property;
+    const value = _mapPropertyValue(attr.value);
+
+    if (attr.name.type === "JSXNamespacedName")
+      property = t.stringLiteral(
+        attr.name.namespace.name + ":" + attr.name.name.name,
+      );
+    else property = t.stringLiteral(attr.name.name);
+
+    properties.push(t.objectProperty(property, value));
+  });
+
+  if (component) {
+    properties.push(
+      t.objectProperty(
+        t.stringLiteral("children"),
+        t.arrayExpression(
+          path.node.children.map((child) => _mapPropertyValue(child)),
+        ),
+      ),
+    );
+  }
+
+  attrsObject.properties = attrsObject.properties.concat(properties);
+
+  return attrsObject;
+}
+
+
+// function getRootBoundNode(path, name) {
+//   let binding = path.scope.getBinding(name);
+//   if (!binding) return;
+
+
+//   if (!binding || !binding.path || !binding.path.node || !binding.path.node.init) {
+//     return;
+//   }
+//   let init = binding.path.node.init;
+//   if (!init) return
+
+//   if (init && init.type === "Identifier")
+//     return getRootBoundNode(path, init.name);
+//   if (init && init.type === "MemberExpression") {
+//     if (init.object.type === "Identifier")
+//       return getRootBoundNode(path, init.object.name);
+//     else return
+//   }
+//   return binding;
+// }
 
 function getRootBoundNode(path, name) {
   let binding = path.scope.getBinding(name);
-  if (!binding) return;
+
+  if (!binding || !binding.path || !binding.path.node || !binding.path.node.init) {
+    return;
+  }
 
   let init = binding.path.node.init;
-  if (init && init.type === "Identifier")
-    return getRootBoundNode(path, init.name);
+
+  if (init.type === "Identifier") {
+    return getRootBoundNode(binding.path, init.name);
+  }
+
+  if (init.type === "MemberExpression") {
+    if (init.object.type === "Identifier") {
+      return getRootBoundNode(binding.path, init.object.name);
+    }
+    return binding;
+  }
+
   return binding;
+}
+
+const getContextVariableBinding = (path, name) => {
+  const binding = getRootBoundNode(path.parentPath, name);
+  if (!binding) return;
+
+
+  const init = binding.path.node.init;
+  if (!init) return;
+
+  if (
+    assert.isModuleMethod(path, "loadContext", init) ||
+    assert.isModuleMethod(path, "createContext", init)
+  ) {
+    return binding
+  }
 }
 
 function getObservableBinding(path, name) {
   const binding = getRootBoundNode(path, name);
   if (!binding) return;
 
+
   const init = binding.path.node.init;
-  if (!init) return;
+
+
+  if (!init) {
+    return
+  }
 
   if (
     assert.isModuleMethod(path, "observe", init) ||
     assert.isModuleMethod(path, "compute", init)
   )
     return binding;
+
+  if (path.node.type === "Identifier" && path.node.name.startsWith(CONTEXT_PREFIX))
+    return binding
 }
 
 function findNestedIdentifiers(path, matcher) {
@@ -100,13 +210,17 @@ function findComponentBlockStatement(path) {
     });
 }
 
-function findComponentBlockStatement(path) {
-  if (findComponentRoot(path))
-    return utils.findNearestAncestor(path, (p) => {
-      if (p.node.type === "BlockStatement" && !assert.isInnerFunction(path))
-        return true;
-    });
+function findRootBlockStatement(path) {
+  let block = null
+
+  utils.findNearestAncestor(path, (p) => {
+    if (p.node.type === "BlockStatement")
+      block = p
+  });
+
+  return block
 }
+
 
 function findParentVariableDeclarator(path) {
   return utils.findNearestAncestor(path, (p) => {
@@ -116,15 +230,18 @@ function findParentVariableDeclarator(path) {
   });
 }
 
-
 module.exports = {
+  findNearestAncestor,
+  getJSXProperties,
   getRootBoundNode,
+  getContextVariableBinding,
   getObservableBinding,
   findNestedIdentifiers,
   findNestedObservables,
   getFunctionParams,
   findComponentRoot,
   findFunctionRoot,
+  findRootBlockStatement,
   findComponentBlockStatement,
   findParentVariableDeclarator,
 };

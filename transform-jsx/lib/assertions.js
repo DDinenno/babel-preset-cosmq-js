@@ -1,3 +1,4 @@
+const { CONTEXT_PREFIX } = require("../constants");
 const { findNearestAncestor } = require("./utils");
 
 function matchParentRecursively(path, matcher) {
@@ -77,6 +78,7 @@ function isModuleMethod(path, methodName, _node = null) {
 function isIdentifierInDeps(path) {
   return matchParentRecursively(path, (p) => {
     if (p.type === "ArrayExpression") {
+
       if (isModuleMethod(p.parentPath, "conditional")) {
         if (p.parentPath.node.arguments[0] === p.node) return true;
         return false;
@@ -92,7 +94,7 @@ function isIdentifierInDeps(path) {
 
 function isWrappedInPropertyValueGetter(path) {
   return matchParentRecursively(path, (parentPath) =>
-    isModuleMethod(parentPath.node, "getPropValue")
+    isModuleMethod(parentPath, "getPropValue")
   );
 }
 
@@ -100,8 +102,8 @@ function isInComputedDeps(path) {
   if (path.parent == null) return false;
   if (path.type === "ArrayExpression") {
     if (
-      isModuleMethod(path.parent.callee, "compute") ||
-      isModuleMethod(path.parent.callee, "conditional")
+      isModuleMethod(path.parentPath, "compute") ||
+      isModuleMethod(path.parentPath, "conditional")
     )
       return true;
   }
@@ -146,21 +148,28 @@ function isWrappedInConditionalStatement(path) {
   return matchParentRecursively(
     path,
     (p) =>
-      isModuleMethod(p.node.callee, "conditional") &&
+      isModuleMethod(p, "conditional") &&
       isInConditionalCondition(path)
   );
 }
 
 function isInComponentProps(path) {
   return matchParentRecursively(path, (parentPath) => {
-    return isModuleMethod(parentPath.node.callee, "registerComponent");
+    return isModuleMethod(parentPath, "registerComponent");
+  });
+}
+
+function isInElement(path) {
+  return matchParentRecursively(path, (parentPath) => {
+    return isModuleMethod(parentPath, "registerElement");
   });
 }
 
 function isFunction(path) {
   return (
-    path.node.type === "FunctionDeclaration" ||
-    (path.node.type === "VariableDeclaration" &&
+
+    path.node && path.node.type === "FunctionDeclaration" ||
+    (path.node && path.node.type === "VariableDeclaration" &&
       path.node.declarations[0] &&
       path.node.declarations[0].init &&
       path.node.declarations[0].init.type === "ArrowFunctionExpression")
@@ -244,6 +253,24 @@ function isObservableAssignment(path) {
   return false;
 }
 
+
+function isRootMemberExpReference(path) {
+  const isObjectOfMember =
+    path.parent &&
+    path.parent.type === "MemberExpression" &&
+    path.parent.object === path.node;
+
+  if (!isObjectOfMember) return false;
+
+  const parentIsAlsoMemberObject =
+    path.parentPath &&
+    path.parentPath.parent &&
+    path.parentPath.parent.type === "MemberExpression" &&
+    path.parentPath.parent.object === path.parent;
+
+  return !parentIsAlsoMemberObject;
+}
+
 function isEntityShorthand(path, name) {
   if (
     path.node.type === "VariableDeclarator" &&
@@ -307,6 +334,7 @@ module.exports = {
   isInComponentBody,
   isFunction,
   isComponentFunction,
+  isInElement,
   isComponentIdentifier,
   isInBlockStatement,
   isWrappedInSetter,
@@ -322,4 +350,5 @@ module.exports = {
   isInReactiveList,
   isEntityShorthand,
   isReactiveListData,
+  isRootMemberExpReference,
 };

@@ -210,6 +210,9 @@ exports.default = function (babel) {
 
   return {
     name: "ast-transform",
+    manipulateOptions(opts, parserOpts) {
+      parserOpts.plugins.push("jsx");
+    },
     visitor: {
       Identifier(path) {},
       BlockStatement(path) {
