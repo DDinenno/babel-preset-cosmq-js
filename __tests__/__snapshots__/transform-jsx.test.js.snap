@@ -457,8 +457,23 @@ exports[`transform-jsx 25. preserves explicitly provided dependencies for comput
 
 const Component_ExplicitCompute = () => {
   const a = observe(1);
-  const sum = compute(() => a * 2, [a]);
-  return <div>{sum}</div>;
+  const b = observe([1,2,4,5])
+  const computedValue = compute(() => {
+    const innerVar = a * 2
+    const innerVar2 = b[1]
+    const innerVar3 = b[a]
+    return 2 / a * (4 + innerVar2) + innerVar2[3] + innerVar3
+  });
+
+  compute(() => {
+    const innerVar = a * 2
+    const innerVar2 = b[1]
+    const innerVar3 = b[a]
+    return 2 / a * (4 + innerVar2) + innerVar2[3] + innerVar3
+  });
+
+
+  return <div>{computedValue}</div>;
 };
       
 
@@ -466,8 +481,20 @@ const Component_ExplicitCompute = () => {
 
 const Component_ExplicitCompute = () => {
   const a = observe(1);
-  const sum = compute(() => a.value * 2, [a]);
-  return Cosmq.registerElement("div", {}, [sum]);
+  const b = observe([1, 2, 4, 5]);
+  const computedValue = compute(() => {
+    const innerVar = a.value * 2;
+    const innerVar2 = b.value[1];
+    const innerVar3 = b.value[a.value];
+    return 2 / a.value * (4 + innerVar2) + innerVar2[3] + innerVar3;
+  }, [a, b]);
+  compute(() => {
+    const innerVar = a.value * 2;
+    const innerVar2 = b.value[1];
+    const innerVar3 = b.value[a.value];
+    return 2 / a.value * (4 + innerVar2) + innerVar2[3] + innerVar3;
+  }, [a, b]);
+  return Cosmq.registerElement("div", {}, [computedValue]);
 };
 
 `;

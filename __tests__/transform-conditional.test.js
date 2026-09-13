@@ -1,5 +1,5 @@
-const { pluginTester } = require("babel-plugin-tester");
-const transformConditionalPlugin = require("../transform-jsx-conditional/lib/index");
+import { pluginTester } from "babel-plugin-tester";
+import transformConditionalPlugin from "../dist/transform-jsx-conditional/lib/index.js";
 
 pluginTester({
   plugin: transformConditionalPlugin,

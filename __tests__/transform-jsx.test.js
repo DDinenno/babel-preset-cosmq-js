@@ -1,5 +1,5 @@
-const { pluginTester } = require("babel-plugin-tester");
-const transformJSXPlugin = require("../transform-jsx/index");
+import { pluginTester } from "babel-plugin-tester";
+import transformJSXPlugin from "../dist/transform-jsx/index.js";
 
 pluginTester({
   plugin: transformJSXPlugin,
@@ -220,6 +220,30 @@ pluginTester({
           const a = observe(1);
           const sum = compute(() => a * 2, [a]);
           return <div>{sum}</div>;
+        };
+      `,
+    },
+    "preserves explicitly provided dependencies for compute": {
+      code: `
+        const Component_ExplicitCompute = () => {
+          const a = observe(1);
+          const b = observe([1,2,4,5])
+          const computedValue = compute(() => {
+            const innerVar = a * 2
+            const innerVar2 = b[1]
+            const innerVar3 = b[a]
+            return 2 / a * (4 + innerVar2) + innerVar2[3] + innerVar3
+          });
+
+          compute(() => {
+            const innerVar = a * 2
+            const innerVar2 = b[1]
+            const innerVar3 = b[a]
+            return 2 / a * (4 + innerVar2) + innerVar2[3] + innerVar3
+          });
+
+
+          return <div>{computedValue}</div>;
         };
       `,
     },

@@ -1,5 +1,5 @@
-const babel = require("@babel/core");
-const cosmqPreset = require("../index");
+import * as babel from "@babel/core";
+import cosmqPreset from "../dist/index.js";
 
 describe("babel-preset-cosmq", () => {
   it("exports preset object with transform-jsx and transform-jsx-conditional plugins", () => {
