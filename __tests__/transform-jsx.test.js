@@ -1,9 +1,10 @@
 import { pluginTester } from "babel-plugin-tester";
 import transformJSXPlugin from "../dist/transform-jsx/index.js";
+import preset from "../dist/index.js";
 
 pluginTester({
-  plugin: transformJSXPlugin,
-  pluginName: "transform-jsx",
+  preset,
+  presetName: "transform-jsx",
   formatResult: (code) => code,
   snapshot: true,
   tests: {

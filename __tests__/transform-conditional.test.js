@@ -1,9 +1,9 @@
 import { pluginTester } from "babel-plugin-tester";
-import transformConditionalPlugin from "../dist/transform-jsx-conditional/lib/index.js";
+import preset from "../dist/index.js";
 
 pluginTester({
-  plugin: transformConditionalPlugin,
-  pluginName: "transform-jsx-conditional",
+  preset,
+  presetName: "transform-jsx-conditional",
   formatResult: (code) => code,
   snapshot: true,
   tests: {

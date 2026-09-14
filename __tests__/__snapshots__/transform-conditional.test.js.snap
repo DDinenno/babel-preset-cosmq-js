@@ -7,10 +7,10 @@ const show = true; <div>{IF(show)(<span>Visible</span>)}</div>;
       ↓ ↓ ↓ ↓ ↓ ↓
 
 const show = true;
-<div>{Cosmq.conditional([show], [{
-    "__condition__": () => show,
-    "body": () => (<span>Visible</span>)
-  }])}</div>;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([show], [{
+  "__condition__": () => show,
+  "body": () => (Cosmq.registerElement("span", {}, ["Visible"]))
+}])]);
 
 `;
 
@@ -27,13 +27,13 @@ const isLoggedIn = false;
       ↓ ↓ ↓ ↓ ↓ ↓
 
 const isLoggedIn = false;
-<div>{Cosmq.conditional([isLoggedIn], [{
-    "__condition__": () => isLoggedIn,
-    "body": () => (<span>Welcome back!</span>)
-  }, {
-    "__condition__": () => true,
-    "body": () => (<span>Please log in.</span>)
-  }])}</div>;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([isLoggedIn], [{
+  "__condition__": () => isLoggedIn,
+  "body": () => (Cosmq.registerElement("span", {}, ["Welcome back!"]))
+}, {
+  "__condition__": () => true,
+  "body": () => (Cosmq.registerElement("span", {}, ["Please log in."]))
+}])]);
 
 `;
 
@@ -51,16 +51,16 @@ const status = "loading";
       ↓ ↓ ↓ ↓ ↓ ↓
 
 const status = "loading";
-<div>{Cosmq.conditional([status], [{
-    "__condition__": () => status === "loading",
-    "body": () => (<span>Loading...</span>)
-  }, {
-    "__condition__": () => status === "error",
-    "body": () => (<span>Error occurred!</span>)
-  }, {
-    "__condition__": () => true,
-    "body": () => (<span>Ready</span>)
-  }])}</div>;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([status], [{
+  "__condition__": () => status === "loading",
+  "body": () => (Cosmq.registerElement("span", {}, ["Loading..."]))
+}, {
+  "__condition__": () => status === "error",
+  "body": () => (Cosmq.registerElement("span", {}, ["Error occurred!"]))
+}, {
+  "__condition__": () => true,
+  "body": () => (Cosmq.registerElement("span", {}, ["Ready"]))
+}])]);
 
 `;
 
@@ -78,10 +78,10 @@ const count = 5;
 
 const isReady = true;
 const count = 5;
-<div>{Cosmq.conditional([isReady, count], [{
-    "__condition__": () => isReady && count > 0,
-    "body": () => (<div>Active with items</div>)
-  }])}</div>;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([isReady, count], [{
+  "__condition__": () => isReady && count > 0,
+  "body": () => (Cosmq.registerElement("div", {}, ["Active with items"]))
+}])]);
 
 `;
 
@@ -102,15 +102,15 @@ const b = false;
 
 const a = true;
 const b = false;
-<div>{Cosmq.conditional([a], [{
-    "__condition__": () => a,
-    "body": () => (<span>A</span>)
-  }])}<hr />{Cosmq.conditional([b], [{
-    "__condition__": () => b,
-    "body": () => (<span>B</span>)
-  }, {
-    "__condition__": () => true,
-    "body": () => (<span>Not B</span>)
-  }])}</div>;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([a], [{
+  "__condition__": () => a,
+  "body": () => (Cosmq.registerElement("span", {}, ["A"]))
+}]), Cosmq.registerElement("hr", {}, []), Cosmq.conditional([b], [{
+  "__condition__": () => b,
+  "body": () => (Cosmq.registerElement("span", {}, ["B"]))
+}, {
+  "__condition__": () => true,
+  "body": () => (Cosmq.registerElement("span", {}, ["Not B"]))
+}])]);
 
 `;
