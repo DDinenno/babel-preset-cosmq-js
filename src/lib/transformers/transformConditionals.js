@@ -1,5 +1,5 @@
-import * as assert from "../lib/assertions.js";
-import ConditionExpression from "../lib/classes/ConditionalExpression.js";
+import * as assert from "../assertions.js";
+import ConditionExpression from "../classes/ConditionalExpression.js";
 
 
 

@@ -1,11 +1,11 @@
 
 import { TRANSFORMER_STEPS } from "../lib/constants.js";
-import transformReactiveList from "../transformers/transformReactiveList.js"
-import transformComputed from "../transformers/transformComputed.js";
-import transformContext from "../transformers/transformContext.js";
-import transformObservables from "../transformers/transformObservables.js";
-import transformJSXElements from "../transformers/transformJSXElements.js";
-import transformConditionals from "../transformers/transformConditionals.js";
+import transformReactiveList from "../lib/transformers/transformReactiveList.js"
+import transformComputed from "../lib/transformers/transformComputed.js";
+import transformContext from "../lib/transformers/transformContext.js";
+import transformObservables from "../lib/transformers/transformObservables.js";
+import transformJSXElements from "../lib/transformers/transformJSXElements.js";
+import transformConditionals from "../lib/transformers/transformConditionals.js";
 
 const stages = {
   preJSX: {},

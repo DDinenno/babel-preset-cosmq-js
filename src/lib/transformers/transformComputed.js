@@ -1,8 +1,8 @@
-import * as assert from "../lib/assertions.js";
-import * as query from "../lib/query.js";
-import * as utils from "../lib/utils.js";
+import * as assert from "../assertions.js";
+import * as query from "../query.js";
+import * as utils from "../utils.js";
 import generatePkg from "@babel/generator";
-import { LIB_NAME, REACTIVE_LIST, REACTIVE_LIST_KEY_PROP } from "../lib/constants.js";
+import { LIB_NAME, REACTIVE_LIST, REACTIVE_LIST_KEY_PROP } from "../constants.js";
 const generate = generatePkg.default || generatePkg;
 
 

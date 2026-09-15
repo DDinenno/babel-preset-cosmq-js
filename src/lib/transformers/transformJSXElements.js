@@ -1,6 +1,6 @@
-import * as assert from "../lib/assertions.js";
-import * as query from "../lib/query.js";
-import { CONTEXT_PREFIX } from "../lib/constants.js";
+import * as assert from "../assertions.js";
+import * as query from "../query.js";
+import { CONTEXT_PREFIX } from "../constants.js";
 
 
 
