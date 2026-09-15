@@ -3,6 +3,7 @@ import * as assert from "../lib/assertions.js";
 import * as query from "../lib/query.js";
 import * as utils from "../lib/utils.js";
 import generatePkg from "@babel/generator";
+import { LIB_NAME, REACTIVE_LIST, REACTIVE_LIST_KEY_PROP } from "../../dist/lib/constants.js";
 const generate = generatePkg.default || generatePkg;
 
 export default function (babel) {
@@ -15,7 +16,7 @@ export default function (babel) {
     if (assert.isWrappedInEffectFunc(path)) return;
     if (assert.isWrappedInSetter(path)) return;
     if (assert.isModuleMethod(path, "conditional", path.node)) return false;
-    if (assert.isInReactiveList(path)) return false;
+    // if (assert.isInReactiveList(path)) return false;
     if (assert.isWrappedInObserveFunc(path)) return false;
 
     if (path.node.type === "CallExpression") {
@@ -75,8 +76,10 @@ export default function (babel) {
             return
           }
 
-          // Removes inner computed calles
+          // Removes inner computed calls
           if (assert.isWrappedInComputedFunc(p) || true) {
+            if (p.node.callee.name !== "compute") return
+
             const callbackArg = p.node.arguments[0];
 
 
@@ -87,22 +90,20 @@ export default function (babel) {
                 const returnStmt = functionBody.body.find(st => st.type === 'ReturnStatement');
                 if (returnStmt && returnStmt.argument) {
                   p.replaceWith(returnStmt.argument);
-                  t.addComment(returnStmt.argument, "leading", "COSMQ - Removed Nested Compute", false);
+                  t.addComment(returnStmt.argument, "leading", "COSMQ - Removed Nested Compute 1", false);
 
                 }
               }
-              else {
+              else if (p.node.type === "CallExpression" && p.node.callee.name === "compute") {
                 p.replaceWith(functionBody);
-                t.addComment(functionBody, "leading", "COSMQ - Removed Nested Compute", false);
+                t.addComment(functionBody, "leading", "COSMQ - Removed Nested Compute 2", false);
               }
             } else if (callbackArg) {
               if (callbackArg.type !== "ConditionalExpression") return
 
+              p.replaceWith(callbackArg);
+              t.addComment(callbackArg, "leading", "COSMQ - Removed Nested Compute 3", false);
 
-              if (p.node.type === "CallExpression" && p.node.callee.name === "compute") {
-                p.replaceWith(callbackArg);
-                t.addComment(callbackArg, "leading", "COSMQ - Removed Nested Compute", false);
-              }
             }
           }
         }
@@ -139,15 +140,7 @@ export default function (babel) {
     }
   };
 
-  const transformPropGetter = (path) => {
-    const callee = t.memberExpression(
-      t.identifier("Cosmq"),
-      t.identifier("getPropValue"),
-    );
 
-    const callExpression = t.callExpression(callee, [path.node]);
-    path.replaceWith(callExpression);
-  };
 
   const transformJSXElement = (path, inner = false) => {
     var openingElement = path.node.openingElement;
@@ -159,75 +152,7 @@ export default function (babel) {
       ...transformGroup
     });
 
-    if (tagName === "ReactiveList") {
-      const fnName = "reactiveList";
-
-      let data = null;
-      let key = null;
-      let children = t.arrayExpression([]);
-      let body = null
-      const openingEl = path.node.openingElement
-
-
-      if (!path.node.children || path.node.children.length === 0) throw new Error("Missing children in ReactiveList")
-      path.node.children.forEach(child => {
-        if (child.type === "JSXText") return
-
-        if (child.type === "JSXExpressionContainer" && child.expression.type === "ArrowFunctionExpression") {
-          body = child.expression
-        } else {
-          throw new Error("Expexted a arrow function expression as a child of ReactiveList")
-        }
-      })
-
-      if (!openingEl.attributes || !openingEl.attributes.length) throw new Error("Missing data attribute in ReactiveList")
-
-      openingEl.attributes.forEach((attr) => {
-        if (attr.type === "JSXSpreadAttribute") {
-          throw new Error("Spread attributes are not supported in ReactiveList");
-        }
-
-        if (attr.name.name === "data") {
-          data = attr.value.expression
-        }
-
-        if (attr.name.name === "key" && attr.value.type === "JSXExpressionContainer") {
-          key = attr.value.expression
-        }
-      });
-
-      path.traverse({
-        JSXElement: (path) => transformJSXElement(path, true),
-      });
-
-
-      if (!key) {
-        throw new Error("Missing required prop 'key' in ReactiveList")
-      }
-
-      if (!data) {
-        throw new Error("Missing required prop 'data' in ReactiveList")
-      }
-
-      if (!body) {
-        throw new Error("Missing required child in ReactiveList")
-      }
-
-      if (body.type !== "ArrowFunctionExpression") throw new Error("Invalid body type in ReactiveList")
-      body = t.arrowFunctionExpression(body.params, body.body)
-
-      const callee = t.memberExpression(reactIdentifier, t.identifier(fnName));
-      const callExpression = t.callExpression(callee, [
-        data,
-        t.objectExpression([t.objectProperty(t.identifier("getKey"), key)]),
-        body,
-      ]);
-
-
-      path.replaceWith(callExpression, path.node)
-    }
-
-    else if (tagName[0] === tagName[0].toUpperCase()) {
+    if (tagName[0] === tagName[0].toUpperCase()) {
 
       const componentName = tagName.replace(/^Component_/, "");
       const componentDeclarationName = `Component_${componentName}`;
@@ -438,6 +363,24 @@ export default function (babel) {
 
 
   const transformIdentifier = (path) => {
+    // if (assert.isMapInJSXExpression(path)) {
+    //   // path.parentPath.replaceWith(t.identifier(path.node.name));
+    //   return;
+    // }
+
+
+    // if (path.node.name.startsWith("items2")) {
+    //   // let compare = []
+
+    //   // const parents = []
+    //   // path.findParent((p) => {
+    //   //   parents.push(p.type)
+    //   // });
+    //   // console.log("Is map", path.node.name, [...parents], assert.isMapInJSXExpression(path))
+
+    // }
+
+
     if (
       path.parent?.type === "ObjectProperty" &&
       path.parent?.key === path.node &&
@@ -451,6 +394,8 @@ export default function (babel) {
     ) {
       return;
     }
+
+
 
     if (query.getObservableBinding(path, path.node.name)) {
       const excludeParentTypes = [
@@ -508,26 +453,6 @@ export default function (babel) {
     }
   };
 
-  const transformCallee = (path, callee, from, to) => {
-    if (callee.type === "Identifier") {
-      const binding = path.scope.getBinding(callee.name);
-      if (!binding && callee.name == from) {
-        callee.name = to;
-        return;
-      }
-    }
-
-    if (callee.type === "MemberExpression") {
-      if (callee.type === "MemberExpression") {
-        if (callee.property.name === from) {
-          callee.property.name = to
-          return
-        }
-      }
-    }
-
-    throw new Error(`Unhandled callee transformation ${callee.type}`)
-  }
 
   const transformCallExpression = (path) => {
     if (
@@ -586,14 +511,7 @@ export default function (babel) {
     }
   };
 
-  const transformJSXText = (path) => {
-    // remove Blank JSXText
-    if (path.node.value.replace(/\n|\r\n|\s/gi, "").length === 0) {
-      path.remove();
-    } else {
-      path.replaceWith(t.stringLiteral(path.node.value));
-    }
-  }
+
 
 
   const transformJSXExpressionContainer = (path) => {
@@ -615,18 +533,29 @@ export default function (babel) {
   }
 
 
+  const transformJSXText = (path) => {
+    // remove Blank JSXText
+    if (path.node.value.replace(/\n|\r\n|\s/gi, "").length === 0) {
+      path.remove();
+    } else {
+      path.replaceWith(t.stringLiteral(path.node.value));
+    }
+  }
+
+
+
   const transformGroup = {
-    VariableDeclaration: transformVariableDeclaration,
-    Identifier: transformIdentifier,
-    CallExpression: transformCallExpression,
-    ConditionalExpression: transformComputed,
-    BinaryExpression: transformComputed,
-    LogicalExpression: transformComputed,
-    TemplateLiteral: transformComputed,
-    AssignmentExpression: transformAssignment,
-    JSXAttribute: transformComputed,
-    JSXElement: transformJSXElement,
-    JSXText: transformJSXText,
+    // VariableDeclaration: transformVariableDeclaration,
+    // Identifier: transformIdentifier,
+    // CallExpression: transformCallExpression,
+    // ConditionalExpression: transformComputed,
+    // BinaryExpression: transformComputed,
+    // LogicalExpression: transformComputed,
+    // TemplateLiteral: transformComputed,
+    // AssignmentExpression: transformAssignment,
+    // JSXAttribute: transformComputed,
+    // JSXElement: transformJSXElement,
+    // JSXText: transformJSXText,
   }
 
   return {
@@ -635,8 +564,8 @@ export default function (babel) {
       parserOpts.plugins.push("jsx");
     },
     visitor: {
-      ...transformGroup,
-      JSXExpressionContainer: transformJSXExpressionContainer
+      // ...transformGroup,
+      // JSXExpressionContainer: transformJSXExpressionContainer
     },
   };
 };

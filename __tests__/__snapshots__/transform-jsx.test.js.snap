@@ -407,7 +407,7 @@ const Component_Card = props => {
   const {
     title
   } = props;
-  return Cosmq.registerElement("h1", {}, [Cosmq.getPropValue(title)]);
+  return Cosmq.registerElement("h1", {}, [title]);
 };
 
 `;
@@ -684,5 +684,179 @@ const Component_SomeComponent = () => {
     }, [__Cosmq_Context__ctx_b, __Cosmq_Context__ctx_a, __Cosmq_Context__ctx_c])
   }, ["Hello World\\n    "]);
 };
+
+`;
+
+exports[`transform-jsx 32. Infers ReactiveList: 32. Infers ReactiveList 1`] = `
+
+
+
+const Component_Project = ({items}) => {
+  const items2 = observe([{id: 1, name: "test"},{id: 2, name: "test2"}])
+  const activeItem = observe(null)
+
+  return (
+    <div>
+      {items.map(item => (
+        <div key={item.id}>
+          {item.name}
+        </div>
+      ))}
+
+      {items2.map(item => (
+        <div key={item.id} style={{
+          opacity: activeItem?.id === item.id ? 1 : 0.3
+        }}>
+          {item.name}
+        </div>
+      ))}
+    </div>
+  );
+}
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_Project = ({
+  items
+}) => {
+  const items2 = observe([{
+    id: 1,
+    name: "test"
+  }, {
+    id: 2,
+    name: "test2"
+  }]);
+  const activeItem = observe(null);
+  return Cosmq.registerElement("div", {}, [/*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items, {
+    getKey: item => item.id
+  }, item => Cosmq.registerElement("div", {
+    "key": item.id
+  }, [item.name])), /*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items2, {
+    getKey: item => item.id
+  }, item => Cosmq.registerElement("div", {
+    "key": item.id,
+    "style": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return {
+        opacity: activeItem.value?.id === item.id ? 1 : 0.3
+      };
+    }, [activeItem])
+  }, [item.name]))]);
+};
+
+`;
+
+exports[`transform-jsx 33. transforms simple IF conditional in JSX: 33. transforms simple IF conditional in JSX 1`] = `
+
+const show = true; <div>{IF(show)(<span>Visible</span>)}</div>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const show = true;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([show], [{
+  "__condition__": () => show,
+  "body": () => (Cosmq.registerElement("span", {}, ["Visible"]))
+}])]);
+
+`;
+
+exports[`transform-jsx 34. transforms IF and ELSE conditional: 34. transforms IF and ELSE conditional 1`] = `
+
+
+const isLoggedIn = false;
+<div>
+  {IF(isLoggedIn)(<span>Welcome back!</span>)}
+  {ELSE()(<span>Please log in.</span>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const isLoggedIn = false;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([isLoggedIn], [{
+  "__condition__": () => isLoggedIn,
+  "body": () => (Cosmq.registerElement("span", {}, ["Welcome back!"]))
+}, {
+  "__condition__": () => true,
+  "body": () => (Cosmq.registerElement("span", {}, ["Please log in."]))
+}])]);
+
+`;
+
+exports[`transform-jsx 35. transforms IF, ELSEIF, and ELSE conditional chain: 35. transforms IF, ELSEIF, and ELSE conditional chain 1`] = `
+
+
+const status = "loading";
+<div>
+  {IF(status === "loading")(<span>Loading...</span>)}
+  {ELSEIF(status === "error")(<span>Error occurred!</span>)}
+  {ELSE()(<span>Ready</span>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const status = "loading";
+Cosmq.registerElement("div", {}, [Cosmq.conditional([status], [{
+  "__condition__": () => status === "loading",
+  "body": () => (Cosmq.registerElement("span", {}, ["Loading..."]))
+}, {
+  "__condition__": () => status === "error",
+  "body": () => (Cosmq.registerElement("span", {}, ["Error occurred!"]))
+}, {
+  "__condition__": () => true,
+  "body": () => (Cosmq.registerElement("span", {}, ["Ready"]))
+}])]);
+
+`;
+
+exports[`transform-jsx 36. collects multiple observable dependencies in condition: 36. collects multiple observable dependencies in condition 1`] = `
+
+
+const isReady = true;
+const count = 5;
+<div>
+  {IF(isReady && count > 0)(<div>Active with items</div>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const isReady = true;
+const count = 5;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([isReady, count], [{
+  "__condition__": () => isReady && count > 0,
+  "body": () => (Cosmq.registerElement("div", {}, ["Active with items"]))
+}])]);
+
+`;
+
+exports[`transform-jsx 37. handles multiple independent conditional blocks in same element: 37. handles multiple independent conditional blocks in same element 1`] = `
+
+
+const a = true;
+const b = false;
+<div>
+  {IF(a)(<span>A</span>)}
+  <hr />
+  {IF(b)(<span>B</span>)}
+  {ELSE()(<span>Not B</span>)}
+</div>;
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const a = true;
+const b = false;
+Cosmq.registerElement("div", {}, [Cosmq.conditional([a], [{
+  "__condition__": () => a,
+  "body": () => (Cosmq.registerElement("span", {}, ["A"]))
+}]), Cosmq.registerElement("hr", {}, []), Cosmq.conditional([b], [{
+  "__condition__": () => b,
+  "body": () => (Cosmq.registerElement("span", {}, ["B"]))
+}, {
+  "__condition__": () => true,
+  "body": () => (Cosmq.registerElement("span", {}, ["Not B"]))
+}])]);
 
 `;

@@ -1,5 +1,28 @@
 import * as query from "./query.js";
 
+
+const transformCallee = (path, callee, from, to) => {
+  if (callee.type === "Identifier") {
+    const binding = path.scope.getBinding(callee.name);
+    if (!binding && callee.name == from) {
+      callee.name = to;
+      return;
+    }
+  }
+
+  if (callee.type === "MemberExpression") {
+    if (callee.type === "MemberExpression") {
+      if (callee.property.name === from) {
+        callee.property.name = to
+        return
+      }
+    }
+  }
+
+  throw new Error(`Unhandled callee transformation ${callee.type}`)
+}
+
+
 function isPropIdentifier(path) {
   const component = query.findComponentRoot(path);
   if (!component) return;
@@ -45,5 +68,6 @@ function isPropIdentifier(path) {
 }
 
 export {
-  isPropIdentifier
+  isPropIdentifier,
+  transformCallee
 };

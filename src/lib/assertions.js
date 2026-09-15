@@ -1,3 +1,4 @@
+import { CONDITIONAL_EXPRESSIONS } from "./constants.js";
 import * as query from "./query.js";
 
 function matchParentRecursively(path, matcher) {
@@ -28,6 +29,33 @@ function isComputeModuleMethod(path, _node = null) {
 
 function isComputeAliasModuleMethod(path, _node = null) {
   return isModuleMethod(path, "$", _node)
+}
+
+function isCallMemberExpExpression(path, member) {
+  if (!path) return
+  return (path.type === "CallExpression" &&
+    path.node.callee.type === "MemberExpression" &&
+    path.node.callee.property.name === member)
+}
+
+function parentsMatchingTypes(path, arr) {
+  let compare = []
+
+  path.findParent((p) => {
+    compare.push(p.type)
+  });
+
+  compare = compare.slice(0, arr.length)
+
+  return compare.length === arr.length && compare.every((p, i) => p === arr[i])
+}
+
+function isMapInJSXExpression(path) {
+  if (path.type === "Identifier") {
+    if (parentsMatchingTypes(path, ["MemberExpression", "CallExpression", "JSXExpressionContainer"])) {
+      return true;
+    }
+  }
 }
 
 function isModuleMethod(path, methodName, _node = null) {
@@ -226,10 +254,23 @@ function isWrappedInSetter(path) {
 }
 
 function isIdentifierInJSXAttribute(path) {
-  if (["JSXExpressionContainer", "JSXAttribute"].includes(path.parent.type)) {
+  if (["JSXAttribute"].includes(path.parent.type)) {
     return true;
   }
   false;
+}
+
+function isJSXChildElement(path) {
+  if (!path) return false;
+
+  if (path.parentPath?.isJSXElement()) {
+    return true;
+  }
+  if (path.parentPath?.isJSXExpressionContainer() && path.parentPath?.parentPath?.isJSXElement()) {
+    return true;
+  }
+
+  return false;
 }
 
 function isObservableAccessed(path) {
@@ -308,6 +349,19 @@ function isImportIdentifier(path) {
   return false;
 }
 
+function isConditionExpression(node) {
+  if (!node.expression) return false;
+
+  const isIdentifier = node.expression.type === "Identifier";
+  const isCallExp = node.expression.type === "CallExpression";
+
+  if (isIdentifier || isCallExp) {
+    if (!node.expression.callee || !node.expression.callee.callee) return;
+
+    const name = node.expression.callee.callee.name;
+    return CONDITIONAL_EXPRESSIONS.includes(name);
+  }
+}
 export {
   isImportIdentifier,
   isWrappedInConditionalStatement,
@@ -341,4 +395,8 @@ export {
   isEntityShorthand,
   isReactiveListData,
   isRootMemberExpReference,
+  isCallMemberExpExpression,
+  isMapInJSXExpression,
+  isJSXChildElement,
+  isConditionExpression,
 };
