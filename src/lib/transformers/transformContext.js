@@ -1,6 +1,7 @@
-import * as assert from "../lib/assertions.js";
-import * as query from "../lib/query.js";
-import { CONTEXT_PREFIX } from "../lib/constants.js";
+import * as assert from "../assertions.js";
+import * as query from "../query.js";
+import * as utils from "../utils.js";
+import { CONTEXT_PREFIX } from "../constants.js";
 
 
 const transformVariableDeclaration = (t, path) => {
@@ -14,16 +15,10 @@ const transformVariableDeclaration = (t, path) => {
         if (assert.isModuleMethod(path, "createContext", decl.init)) {
             initType = "createContext"
         }
-
-        if (decl.id.name === "Store") {
-            const callee = decl.init.callee;
-
-            if (callee.type === "Identifier") {
-                const binding = path.scope.getBinding(callee.name);
-
-            }
-        }
         if (!initType) return;
+
+        const declarationIdPath = path.get("declarations.0.id")
+        if (!declarationIdPath) throw new Error("Missing variable declaration")
 
         if (decl.id.type === "ObjectPattern") {
             const uniqueId = path.scope.generateUidIdentifier("destructured");
@@ -33,12 +28,9 @@ const transformVariableDeclaration = (t, path) => {
 
                 const localBindingName = p.type === "ObjectProperty" ? p.value.name : p.argument.name;
                 const binding = path.scope.getBinding(localBindingName);
-                // console.log("propName", propName)
 
                 if (binding) {
                     [...binding.constantViolations, ...binding.referencePaths].forEach(refPath => {
-
-                        console.log("refPath", propName, p.type)
                         let propertyName = propName
                         if (p.type === "RestElement") {
                             const propNode = refPath.parentPath.node.property;

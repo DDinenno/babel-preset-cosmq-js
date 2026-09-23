@@ -150,7 +150,7 @@ exports[`transform-jsx 10. transforms ReactiveList with key, data, and render fu
 const el = (
   <ReactiveList data={items} key={(item) => item.id}>
     {(item, i) => (
-      <li key={item.id}>
+      <li id={item.id} index={i}>
         <span>{item.name}</span>
       </li>
     )}
@@ -162,9 +162,14 @@ const el = (
 
 const el = Cosmq.reactiveList(items, {
   getKey: item => item.id
-}, (item, i) => Cosmq.registerElement("li", {
-  "key": item.id
-}, [Cosmq.registerElement("span", {}, [item.name])]));
+}, _Cosmq_element__ => Cosmq.registerElement("li", {
+  "id": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+    return _Cosmq_element__.value.id;
+  }, [_Cosmq_element__]),
+  "index": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+    return _Cosmq_element__.value._Cosmq_index__;
+  }, [_Cosmq_element__])
+}, [Cosmq.registerElement("span", {}, [{Cosmq.compute(() => _Cosmq_element__.value.name, [_Cosmq_element__])}])]));
 
 `;
 
@@ -187,7 +192,7 @@ const Component_TodoList = () => {
   const items = observe([]);
   return Cosmq.reactiveList(items, {
     getKey: item => item.id
-  }, item => Cosmq.registerElement("div", {}, [item.name]));
+  }, _Cosmq_element__ => Cosmq.registerElement("div", {}, [Cosmq.compute(() => _Cosmq_element__.value.name, [_Cosmq_element__])]));
 };
 
 `;
@@ -663,31 +668,93 @@ const Component_SomeComponent = () => {
 
 const Component_SomeComponent = () => {
   const ctx = loadContext();
-  const __Cosmq_Context__ctx_b = ctx.b;
-  const __Cosmq_Context__ctx_a = ctx.a;
-  const __Cosmq_Context__ctx_c = ctx.c;
-  const reassigned = __Cosmq_Context__ctx_c;
-  const test_compute = compute(() => __Cosmq_Context__ctx_a.value + __Cosmq_Context__ctx_b.value, [__Cosmq_Context__ctx_a, __Cosmq_Context__ctx_b]);
+  const _Cosmq_Context__ctx_b = ctx.b;
+  const _Cosmq_Context__ctx_a = ctx.a;
+  const _Cosmq_Context__ctx_c = ctx.c;
+  const reassigned = _Cosmq_Context__ctx_c;
+  const test_compute = compute(() => _Cosmq_Context__ctx_a.value + _Cosmq_Context__ctx_b.value, [_Cosmq_Context__ctx_a, _Cosmq_Context__ctx_b]);
   const handleMouseDown = () => {
-    __Cosmq_Context__ctx_c.set(__Cosmq_Context__ctx_a.value + __Cosmq_Context__ctx_b.value);
+    _Cosmq_Context__ctx_c.set(_Cosmq_Context__ctx_a.value + _Cosmq_Context__ctx_b.value);
   };
   return Cosmq.registerElement("div", {
     "handle:click": () => {
-      __Cosmq_Context__ctx_b.set(__Cosmq_Context__ctx_a.value / __Cosmq_Context__ctx_b.value);
+      _Cosmq_Context__ctx_b.set(_Cosmq_Context__ctx_a.value / _Cosmq_Context__ctx_b.value);
     },
     "handle:mousedown": handleMouseDown,
     "style": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
       return {
-        opacity: __Cosmq_Context__ctx_b.value + __Cosmq_Context__ctx_a.value,
-        position: __Cosmq_Context__ctx_c.value
+        opacity: _Cosmq_Context__ctx_b.value + _Cosmq_Context__ctx_a.value,
+        position: _Cosmq_Context__ctx_c.value
       };
-    }, [__Cosmq_Context__ctx_b, __Cosmq_Context__ctx_a, __Cosmq_Context__ctx_c])
+    }, [_Cosmq_Context__ctx_b, _Cosmq_Context__ctx_a, _Cosmq_Context__ctx_c])
   }, ["Hello World\\n    "]);
 };
 
 `;
 
-exports[`transform-jsx 32. Infers ReactiveList: 32. Infers ReactiveList 1`] = `
+exports[`transform-jsx 32. destructured Context: 32. destructured Context 1`] = `
+
+
+const Component_SomeComponent = () => {
+  const {c,a,b,d,e} = loadContext()
+  const reassigned = c;
+  const test_compute = compute(a + b)
+
+  const handleMouseDown = () => {
+    c = a + b
+  }
+  
+  return (
+    <div 
+      handle:click={() => {
+        b = a / b;
+      }}
+      handle:mousedown={handleMouseDown}
+      style={{
+        opacity: b + a,
+        position: c
+      }}
+    >Hello World
+    </div>
+  )
+};
+
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_SomeComponent = () => {
+  const {
+    c,
+    a,
+    b,
+    d,
+    e
+  } = loadContext();
+  const _Cosmq_Context___destructured_b = b;
+  const _Cosmq_Context___destructured_a = a;
+  const _Cosmq_Context___destructured_c = c;
+  const reassigned = _Cosmq_Context___destructured_c;
+  const test_compute = compute(() => _Cosmq_Context___destructured_a.value + _Cosmq_Context___destructured_b.value, [_Cosmq_Context___destructured_a, _Cosmq_Context___destructured_b]);
+  const handleMouseDown = () => {
+    _Cosmq_Context___destructured_c.set(_Cosmq_Context___destructured_a.value + _Cosmq_Context___destructured_b.value);
+  };
+  return Cosmq.registerElement("div", {
+    "handle:click": () => {
+      _Cosmq_Context___destructured_b.set(_Cosmq_Context___destructured_a.value / _Cosmq_Context___destructured_b.value);
+    },
+    "handle:mousedown": handleMouseDown,
+    "style": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return {
+        opacity: _Cosmq_Context___destructured_b.value + _Cosmq_Context___destructured_a.value,
+        position: _Cosmq_Context___destructured_c.value
+      };
+    }, [_Cosmq_Context___destructured_b, _Cosmq_Context___destructured_a, _Cosmq_Context___destructured_c])
+  }, ["Hello World\\n    "]);
+};
+
+`;
+
+exports[`transform-jsx 33. Infers ReactiveList: 33. Infers ReactiveList 1`] = `
 
 
 
@@ -703,13 +770,17 @@ const Component_Project = ({items}) => {
         </div>
       ))}
 
-      {items2.map(item => (
-        <div key={item.id} style={{
-          opacity: activeItem?.id === item.id ? 1 : 0.3
-        }}>
-          {item.name}
-        </div>
-      ))}
+      {items2.map(({id, name}, i) => {
+        return (
+          <div key={id} style={{
+            opacity: activeItem?.id === id ? 1 * i : 0.3,
+            size: i
+          }}>
+            {name}
+          </div>
+          )
+        }
+      )}
     </div>
   );
 }
@@ -730,23 +801,30 @@ const Component_Project = ({
   const activeItem = observe(null);
   return Cosmq.registerElement("div", {}, [/*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items, {
     getKey: item => item.id
-  }, item => Cosmq.registerElement("div", {
-    "key": item.id
-  }, [item.name])), /*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items2, {
-    getKey: item => item.id
-  }, item => Cosmq.registerElement("div", {
-    "key": item.id,
-    "style": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
-      return {
-        opacity: activeItem.value?.id === item.id ? 1 : 0.3
-      };
-    }, [activeItem])
-  }, [item.name]))]);
+  }, _Cosmq_element__ => Cosmq.registerElement("div", {
+    "key": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return _Cosmq_element__.value.id;
+    }, [_Cosmq_element__])
+  }, [Cosmq.compute(() => _Cosmq_element__.value.name, [_Cosmq_element__])])), /*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items2, {
+    getKey: (_props, i) => _props.id
+  }, _Cosmq_element__ => {
+    return Cosmq.registerElement("div", {
+      "key": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+        return _Cosmq_element__.value.id;
+      }, [_Cosmq_element__]),
+      "style": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+        return {
+          opacity: activeItem.value?.id === _Cosmq_element__.value.id ? 1 * _Cosmq_element__.value._Cosmq_index__ : 0.3,
+          size: _Cosmq_element__.value._Cosmq_index__
+        };
+      }, [activeItem, _Cosmq_element__])
+    }, [Cosmq.compute(() => _Cosmq_element__.value.name, [_Cosmq_element__])]);
+  })]);
 };
 
 `;
 
-exports[`transform-jsx 33. transforms simple IF conditional in JSX: 33. transforms simple IF conditional in JSX 1`] = `
+exports[`transform-jsx 34. transforms simple IF conditional in JSX: 34. transforms simple IF conditional in JSX 1`] = `
 
 const show = true; <div>{IF(show)(<span>Visible</span>)}</div>;
 
@@ -760,10 +838,10 @@ Cosmq.registerElement("div", {}, [Cosmq.conditional([show], [{
 
 `;
 
-exports[`transform-jsx 34. transforms IF and ELSE conditional: 34. transforms IF and ELSE conditional 1`] = `
+exports[`transform-jsx 35. transforms IF and ELSE conditional: 35. transforms IF and ELSE conditional 1`] = `
 
 
-const isLoggedIn = false;
+const isLoggedIn = observe(false);
 <div>
   {IF(isLoggedIn)(<span>Welcome back!</span>)}
   {ELSE()(<span>Please log in.</span>)}
@@ -772,9 +850,9 @@ const isLoggedIn = false;
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-const isLoggedIn = false;
+const isLoggedIn = observe(false);
 Cosmq.registerElement("div", {}, [Cosmq.conditional([isLoggedIn], [{
-  "__condition__": () => isLoggedIn,
+  "__condition__": () => isLoggedIn.value,
   "body": () => (Cosmq.registerElement("span", {}, ["Welcome back!"]))
 }, {
   "__condition__": () => true,
@@ -783,10 +861,10 @@ Cosmq.registerElement("div", {}, [Cosmq.conditional([isLoggedIn], [{
 
 `;
 
-exports[`transform-jsx 35. transforms IF, ELSEIF, and ELSE conditional chain: 35. transforms IF, ELSEIF, and ELSE conditional chain 1`] = `
+exports[`transform-jsx 36. transforms IF, ELSEIF, and ELSE conditional chain: 36. transforms IF, ELSEIF, and ELSE conditional chain 1`] = `
 
 
-const status = "loading";
+const status = observe("loading");
 <div>
   {IF(status === "loading")(<span>Loading...</span>)}
   {ELSEIF(status === "error")(<span>Error occurred!</span>)}
@@ -796,12 +874,12 @@ const status = "loading";
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-const status = "loading";
+const status = observe("loading");
 Cosmq.registerElement("div", {}, [Cosmq.conditional([status], [{
-  "__condition__": () => status === "loading",
+  "__condition__": () => status.value === "loading",
   "body": () => (Cosmq.registerElement("span", {}, ["Loading..."]))
 }, {
-  "__condition__": () => status === "error",
+  "__condition__": () => status.value === "error",
   "body": () => (Cosmq.registerElement("span", {}, ["Error occurred!"]))
 }, {
   "__condition__": () => true,
@@ -810,11 +888,11 @@ Cosmq.registerElement("div", {}, [Cosmq.conditional([status], [{
 
 `;
 
-exports[`transform-jsx 36. collects multiple observable dependencies in condition: 36. collects multiple observable dependencies in condition 1`] = `
+exports[`transform-jsx 37. collects multiple observable dependencies in condition: 37. collects multiple observable dependencies in condition 1`] = `
 
 
-const isReady = true;
-const count = 5;
+const isReady = observe(true);
+const count = observe(5);
 <div>
   {IF(isReady && count > 0)(<div>Active with items</div>)}
 </div>;
@@ -822,20 +900,20 @@ const count = 5;
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-const isReady = true;
-const count = 5;
+const isReady = observe(true);
+const count = observe(5);
 Cosmq.registerElement("div", {}, [Cosmq.conditional([isReady, count], [{
-  "__condition__": () => isReady && count > 0,
+  "__condition__": () => isReady.value && count.value > 0,
   "body": () => (Cosmq.registerElement("div", {}, ["Active with items"]))
 }])]);
 
 `;
 
-exports[`transform-jsx 37. handles multiple independent conditional blocks in same element: 37. handles multiple independent conditional blocks in same element 1`] = `
+exports[`transform-jsx 38. handles multiple independent conditional blocks in same element: 38. handles multiple independent conditional blocks in same element 1`] = `
 
 
-const a = true;
-const b = false;
+const a = observe(true);
+const b = observe(false);
 <div>
   {IF(a)(<span>A</span>)}
   <hr />
@@ -846,17 +924,316 @@ const b = false;
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-const a = true;
-const b = false;
+const a = observe(true);
+const b = observe(false);
 Cosmq.registerElement("div", {}, [Cosmq.conditional([a], [{
-  "__condition__": () => a,
+  "__condition__": () => a.value,
   "body": () => (Cosmq.registerElement("span", {}, ["A"]))
 }]), Cosmq.registerElement("hr", {}, []), Cosmq.conditional([b], [{
-  "__condition__": () => b,
+  "__condition__": () => b.value,
   "body": () => (Cosmq.registerElement("span", {}, ["B"]))
 }, {
   "__condition__": () => true,
   "body": () => (Cosmq.registerElement("span", {}, ["Not B"]))
 }])]);
+
+`;
+
+exports[`transform-jsx 39. Access nested obserable values: 39. Access nested obserable values 1`] = `
+
+
+const Component_test = ({users}) => {
+  const data = observe({
+    name: "",
+    age: "",
+    address: ""
+  })
+
+ console.log(users[0].name)
+
+  return (
+    <div>
+      <input value={data.name} handle:input={(e) => {
+        data = {...data, name: e.target.value}
+      }} />
+      <input value={data.age} handle:input={(e) => {
+          data = {...data, age: e.target.value}
+      }} />
+      <input value={data.address} handle:input={(e) => {
+          data = {...data, address: e.target.value}
+      }} />
+      <button disabled={data.age === "" || data.name === "" || data.address === ""} handle:click={() => {
+        
+      }}>Update</button>
+    </div>
+  )
+}
+
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_test = ({
+  users
+}) => {
+  const data = observe({
+    name: "",
+    age: "",
+    address: ""
+  });
+  console.log(Cosmq.getPropValue(users)[0].name);
+  return Cosmq.registerElement("div", {}, [Cosmq.registerElement("input", {
+    "value": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return data.value.name;
+    }, [data]),
+    "handle:input": e => {
+      data.set({
+        ...data.value,
+        name: e.target.value
+      });
+    }
+  }, []), Cosmq.registerElement("input", {
+    "value": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return data.value.age;
+    }, [data]),
+    "handle:input": e => {
+      data.set({
+        ...data.value,
+        age: e.target.value
+      });
+    }
+  }, []), Cosmq.registerElement("input", {
+    "value": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return data.value.address;
+    }, [data]),
+    "handle:input": e => {
+      data.set({
+        ...data.value,
+        address: e.target.value
+      });
+    }
+  }, []), Cosmq.registerElement("button", {
+    "disabled": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return data.value.age === "" || data.value.name === "" || data.value.address === "";
+    }, [data]),
+    "handle:click": () => {}
+  }, ["Update"])]);
+};
+
+`;
+
+exports[`transform-jsx 40. Access nested obserable values 4: 40. Access nested obserable values 4 1`] = `
+
+
+        const Component_AddModal = ({ onSubmit, onCancel }) => {
+  // const name = observe("");
+  // const birthDay = observe("");
+  // const profession = observe("");
+
+  const user = observe({
+    name: "",
+    birthDay: "",
+    profession: "",
+  })
+
+  const handleSubmit = () => {
+    onSubmit(user)
+  }
+
+  return (
+    <div>
+
+      <div>
+        <button
+          className="alt"
+          handle:click={() => { addModalActive = true }}
+        >
+          X
+        </button>
+
+      </div>
+      <form style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+        <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+          <label>Name</label>
+          <input
+            id="name"
+            value={user.name}
+            handle:input={(e) => user = { ...user, name: e.target.value }}
+          />
+        </div>
+
+
+        <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+          <label>Birth Day</label>
+          <input
+            id="name"
+            value={user.birthDay}
+            handle:input={(e) => user = { ...user, birthDay: e.target.value }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+          <label>Profession</label>
+          <input
+            id="name"
+            value={user.profession}
+            handle:input={(e) => user = { ...user, profession: e.target.value }}
+          />
+        </div>
+
+        <button
+          disabled={
+            user.name === "" ||
+            user.birthDay === "" ||
+            user.profession === ""
+          }
+
+          handle:click={handleSubmit}>submit</button>
+      </form >
+    </div>
+  )
+}
+        
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_AddModal = ({
+  onSubmit,
+  onCancel
+}) => {
+  // const name = observe("");
+  // const birthDay = observe("");
+  // const profession = observe("");
+
+  const user = observe({
+    name: "",
+    birthDay: "",
+    profession: ""
+  });
+  const handleSubmit = () => {
+    Cosmq.getPropValue(onSubmit)(user.value);
+  };
+  return Cosmq.registerElement("div", {}, [Cosmq.registerElement("div", {}, [Cosmq.registerElement("button", {
+    "className": "alt",
+    "handle:click": () => {
+      addModalActive = true;
+    }
+  }, ["\\n          X\\n        "])]), Cosmq.registerElement("form", {
+    "style": {
+      display: "flex",
+      flexDirection: "row",
+      gap: "10px"
+    }
+  }, [Cosmq.registerElement("div", {
+    "style": {
+      display: "flex",
+      flexDirection: "row",
+      gap: "10px"
+    }
+  }, [Cosmq.registerElement("label", {}, ["Name"]), Cosmq.registerElement("input", {
+    "id": "name",
+    "value": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return user.value.name;
+    }, [user]),
+    "handle:input": e => user.set({
+      ...user.value,
+      name: e.target.value
+    })
+  }, [])]), Cosmq.registerElement("div", {
+    "style": {
+      display: "flex",
+      flexDirection: "row",
+      gap: "10px"
+    }
+  }, [Cosmq.registerElement("label", {}, ["Birth Day"]), Cosmq.registerElement("input", {
+    "id": "name",
+    "value": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return user.value.birthDay;
+    }, [user]),
+    "handle:input": e => user.set({
+      ...user.value,
+      birthDay: e.target.value
+    })
+  }, [])]), Cosmq.registerElement("div", {
+    "style": {
+      display: "flex",
+      flexDirection: "row",
+      gap: "10px"
+    }
+  }, [Cosmq.registerElement("label", {}, ["Profession"]), Cosmq.registerElement("input", {
+    "id": "name",
+    "value": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return user.value.profession;
+    }, [user]),
+    "handle:input": e => user.set({
+      ...user.value,
+      profession: e.target.value
+    })
+  }, [])]), Cosmq.registerElement("button", {
+    "disabled": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
+      return user.value.name === "" || user.value.birthDay === "" || user.value.profession === "";
+    }, [user]),
+    "handle:click": handleSubmit
+  }, ["submit"])])]);
+};
+
+`;
+
+exports[`transform-jsx 41. allows for deeply nested observables: 41. allows for deeply nested observables 1`] = `
+
+
+const Component_DeeplyNested = () => {
+  const user = observe({
+    address: {
+      line1: "123 Main St",
+      line2: "Apt 4B",
+      city: "New York",
+      state: "NY",
+      zip: "10001",
+      country: {
+        name: "USA",
+        code: "1"
+      }
+    }
+  });
+
+  const onClick = () => {
+    user = {...user, address: {country: {code: "2"}}}
+  }
+
+
+  return <div handle:click={onClick}>{user.address.country.code}</div>;
+};
+      
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+const Component_DeeplyNested = () => {
+  const user = observe({
+    address: {
+      line1: "123 Main St",
+      line2: "Apt 4B",
+      city: "New York",
+      state: "NY",
+      zip: "10001",
+      country: {
+        name: "USA",
+        code: "1"
+      }
+    }
+  });
+  const onClick = () => {
+    user.set({
+      ...user.value,
+      address: {
+        country: {
+          code: "2"
+        }
+      }
+    });
+  };
+  return Cosmq.registerElement("div", {
+    "handle:click": onClick
+  }, [Cosmq.compute(() => user.value.address.country.code, [user])]);
+};
 
 `;

@@ -1,5 +1,4 @@
 import { pluginTester } from "babel-plugin-tester";
-import transformJSXPlugin from "../dist/transform-jsx/index.js";
 import preset from "../dist/index.js";
 
 pluginTester({
@@ -67,7 +66,7 @@ pluginTester({
         const el = (
           <ReactiveList data={items} key={(item) => item.id}>
             {(item, i) => (
-              <li key={item.id}>
+              <li id={item.id} index={i}>
                 <span>{item.name}</span>
               </li>
             )}
@@ -336,6 +335,34 @@ pluginTester({
         `,
     },
 
+    "destructured Context": {
+      code: `
+        const Component_SomeComponent = () => {
+          const {c,a,b,d,e} = loadContext()
+          const reassigned = c;
+          const test_compute = compute(a + b)
+
+          const handleMouseDown = () => {
+            c = a + b
+          }
+          
+          return (
+            <div 
+              handle:click={() => {
+                b = a / b;
+              }}
+              handle:mousedown={handleMouseDown}
+              style={{
+                opacity: b + a,
+                position: c
+              }}
+            >Hello World
+            </div>
+          )
+        };
+        `,
+    },
+
     // 5. ReactiveList
     "Infers ReactiveList": {
       code: `
@@ -352,24 +379,29 @@ pluginTester({
                 </div>
               ))}
 
-              {items2.map(item => (
-                <div key={item.id} style={{
-                  opacity: activeItem?.id === item.id ? 1 : 0.3
-                }}>
-                  {item.name}
-                </div>
-              ))}
+              {items2.map(({id, name}, i) => {
+                return (
+                  <div key={id} style={{
+                    opacity: activeItem?.id === id ? 1 * i : 0.3,
+                    size: i
+                  }}>
+                    {name}
+                  </div>
+                  )
+                }
+              )}
             </div>
           );
         }
       `,
     },
+
     "transforms simple IF conditional in JSX": {
       code: "const show = true; <div>{IF(show)(<span>Visible</span>)}</div>;",
     },
     "transforms IF and ELSE conditional": {
       code: `
-        const isLoggedIn = false;
+        const isLoggedIn = observe(false);
         <div>
           {IF(isLoggedIn)(<span>Welcome back!</span>)}
           {ELSE()(<span>Please log in.</span>)}
@@ -378,7 +410,7 @@ pluginTester({
     },
     "transforms IF, ELSEIF, and ELSE conditional chain": {
       code: `
-        const status = "loading";
+        const status = observe("loading");
         <div>
           {IF(status === "loading")(<span>Loading...</span>)}
           {ELSEIF(status === "error")(<span>Error occurred!</span>)}
@@ -388,8 +420,8 @@ pluginTester({
     },
     "collects multiple observable dependencies in condition": {
       code: `
-        const isReady = true;
-        const count = 5;
+        const isReady = observe(true);
+        const count = observe(5);
         <div>
           {IF(isReady && count > 0)(<div>Active with items</div>)}
         </div>;
@@ -397,14 +429,145 @@ pluginTester({
     },
     "handles multiple independent conditional blocks in same element": {
       code: `
-        const a = true;
-        const b = false;
+        const a = observe(true);
+        const b = observe(false);
         <div>
           {IF(a)(<span>A</span>)}
           <hr />
           {IF(b)(<span>B</span>)}
           {ELSE()(<span>Not B</span>)}
         </div>;
+      `,
+    },
+    "Access nested obserable values": {
+      code: `
+        const Component_test = ({users}) => {
+          const data = observe({
+            name: "",
+            age: "",
+            address: ""
+          })
+
+         console.log(users[0].name)
+
+          return (
+            <div>
+              <input value={data.name} handle:input={(e) => {
+                data = {...data, name: e.target.value}
+              }} />
+              <input value={data.age} handle:input={(e) => {
+                  data = {...data, age: e.target.value}
+              }} />
+              <input value={data.address} handle:input={(e) => {
+                  data = {...data, address: e.target.value}
+              }} />
+              <button disabled={data.age === "" || data.name === "" || data.address === ""} handle:click={() => {
+                
+              }}>Update</button>
+            </div>
+          )
+        }
+        `,
+
+    },
+    "Access nested obserable values 4": {
+      code: `
+        const Component_AddModal = ({ onSubmit, onCancel }) => {
+  // const name = observe("");
+  // const birthDay = observe("");
+  // const profession = observe("");
+
+  const user = observe({
+    name: "",
+    birthDay: "",
+    profession: "",
+  })
+
+  const handleSubmit = () => {
+    onSubmit(user)
+  }
+
+  return (
+    <div>
+
+      <div>
+        <button
+          className="alt"
+          handle:click={() => { addModalActive = true }}
+        >
+          X
+        </button>
+
+      </div>
+      <form style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+        <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+          <label>Name</label>
+          <input
+            id="name"
+            value={user.name}
+            handle:input={(e) => user = { ...user, name: e.target.value }}
+          />
+        </div>
+
+
+        <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+          <label>Birth Day</label>
+          <input
+            id="name"
+            value={user.birthDay}
+            handle:input={(e) => user = { ...user, birthDay: e.target.value }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+          <label>Profession</label>
+          <input
+            id="name"
+            value={user.profession}
+            handle:input={(e) => user = { ...user, profession: e.target.value }}
+          />
+        </div>
+
+        <button
+          disabled={
+            user.name === "" ||
+            user.birthDay === "" ||
+            user.profession === ""
+          }
+
+          handle:click={handleSubmit}>submit</button>
+      </form >
+    </div>
+  )
+}
+        `,
+
+    },
+
+    "allows for deeply nested observables": {
+      code: `
+        const Component_DeeplyNested = () => {
+          const user = observe({
+            address: {
+              line1: "123 Main St",
+              line2: "Apt 4B",
+              city: "New York",
+              state: "NY",
+              zip: "10001",
+              country: {
+                name: "USA",
+                code: "1"
+              }
+            }
+          });
+
+          const onClick = () => {
+            user = {...user, address: {country: {code: "2"}}}
+          }
+
+
+          return <div handle:click={onClick}>{user.address.country.code}</div>;
+        };
       `,
     },
   },

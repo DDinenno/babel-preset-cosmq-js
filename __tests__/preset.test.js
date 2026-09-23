@@ -6,7 +6,7 @@ describe("babel-preset-cosmq", () => {
     const preset = cosmqPreset();
     expect(preset).toBeDefined();
     expect(Array.isArray(preset.plugins)).toBe(true);
-    expect(preset.plugins.length).toBe(2);
+    expect(preset.plugins.length).toBe(1);
   });
 
   it("transforms a complete component with JSX, conditionals, and observables", () => {

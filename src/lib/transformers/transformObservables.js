@@ -1,43 +1,15 @@
-import * as assert from "../lib/assertions.js";
-import * as query from "../lib/query.js";
-import * as utils from "../lib/utils.js";
-import generatePkg from "@babel/generator";
-import { LIB_NAME, REACTIVE_LIST, REACTIVE_LIST_KEY_PROP } from "../lib/constants.js";
-const generate = generatePkg.default || generatePkg;
-
-const transformIdentifier = (t, path) => {
-    // if (assert.isMapInJSXExpression(path)) {
-    //   // path.parentPath.replaceWith(t.identifier(path.node.name));
-    //   return;
-    // }
+import * as assert from "../assertions.js";
+import * as query from "../query.js";
+import * as utils from "../utils.js";
 
 
-    // if (path.node.name.startsWith("items2")) {
-    //   // let compare = []
-
-    //   // const parents = []
-    //   // path.findParent((p) => {
-    //   //   parents.push(p.type)
-    //   // });
-    //   // console.log("Is map", path.node.name, [...parents], assert.isMapInJSXExpression(path))
-
-    // }
-
-
-    if (
-        path.parent?.type === "ObjectProperty" &&
+export const transformIdentifier = (t, path) => {
+    if (path.parent?.type === "ObjectProperty" &&
         path.parent?.key === path.node &&
         !path?.parent?.computed
     ) {
         return;
     }
-
-    if (
-        ["RestElement", "VariableDeclarator"].includes(path.parent?.type)
-    ) {
-        return;
-    }
-
 
 
     if (query.getObservableBinding(path, path.node.name)) {
@@ -45,10 +17,12 @@ const transformIdentifier = (t, path) => {
             "ReturnStatement",
             "VariableDeclarator",
             "RestElement",
-            "JSXExpressionContainer"
+            "JSXExpressionContainer",
+            "JSXElement"
         ];
 
         if (excludeParentTypes.includes(path.parent?.type)) return;
+        if (assert.isArrowFunctionParameter(path)) return
         if (assert.isIdentifierInDeps(path)) return;
         if (assert.isInElement(path)) return;
         if (assert.isInComponentProps(path)) return;
@@ -57,6 +31,8 @@ const transformIdentifier = (t, path) => {
         if (assert.isObservableAssignment(path)) return;
         if (assert.isReactiveListData(path)) return;
         if (assert.isWrappedInObserveFunc(path)) return;
+
+
 
         if (query.getContextVariableBinding(path, path.node.name)) {
             if (path.parent?.type === "AssignmentExpression") {
@@ -74,15 +50,14 @@ const transformIdentifier = (t, path) => {
 
                 path.replaceWith(callee);
             }
-            return;
+        } else {
+            const callee = t.memberExpression(
+                t.identifier(path.node.name),
+                t.identifier("value"),
+            );
+
+            path.replaceWith(callee);
         }
-
-        const callee = t.memberExpression(
-            t.identifier(path.node.name),
-            t.identifier("value"),
-        );
-
-        path.replaceWith(callee);
     } else if (utils.isPropIdentifier(path)) {
         if (assert.isWrappedInPropertyValueGetter(path)) return;
         if (assert.isIdentifierInDeps(path)) return;

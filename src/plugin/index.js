@@ -17,6 +17,7 @@ const registerTransformer = (plugin) => {
   Object.keys(TRANSFORMER_STEPS).forEach((stage) => {
 
     const visitors = plugin[stage] || {}
+    if (!stages[stage]) stages[stage] = {}
 
     Object.entries(visitors).forEach(([visitorType, fn]) => {
       if (typeof fn !== "function") {
@@ -58,11 +59,9 @@ export default function (babel) {
     },
     visitor: {
       Program: path => {
-        runStage(stages.preJSX, path)
-
-        runStage(stages.JSX, path)
-
-        runStage(stages.postJSX, path)
+        Object.entries(stages).forEach(([stageName, stage]) => {
+          runStage(stage, path)
+        })
       }
     },
   };

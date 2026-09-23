@@ -288,20 +288,10 @@ function isObservableAssignment(path) {
 }
 
 function isRootMemberExpReference(path) {
-  const isObjectOfMember =
-    path.parent &&
-    path.parent.type === "MemberExpression" &&
-    path.parent.object === path.node;
+  if (!path?.isMemberExpression?.()) return false
+  const parent = path.parent
 
-  if (!isObjectOfMember) return false;
-
-  const parentIsAlsoMemberObject =
-    path.parentPath &&
-    path.parentPath.parent &&
-    path.parentPath.parent.type === "MemberExpression" &&
-    path.parentPath.parent.object === path.parent;
-
-  return !parentIsAlsoMemberObject;
+  return !parent || parent?.type !== "MemberExpression"
 }
 
 function isEntityShorthand(path, name) {
@@ -362,6 +352,15 @@ function isConditionExpression(node) {
     return CONDITIONAL_EXPRESSIONS.includes(name);
   }
 }
+
+function isArrowFunctionParameter(path) {
+  const parent = path.parentPath.node;
+  if (parent.type === "ArrowFunctionExpression") {
+    return parent.params.includes(path.node);
+  }
+}
+
+
 export {
   isImportIdentifier,
   isWrappedInConditionalStatement,
@@ -399,4 +398,5 @@ export {
   isMapInJSXExpression,
   isJSXChildElement,
   isConditionExpression,
+  isArrowFunctionParameter
 };

@@ -1,9 +1,9 @@
-import transform from "./transform/index.js";
+import mainPlugin from "./plugin/index.js";
 
 export default function () {
   return {
     plugins: [
-      transform,
+      mainPlugin,
     ],
   };
 }

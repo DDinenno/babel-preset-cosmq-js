@@ -1,4 +1,4 @@
-import { CONTEXT_PREFIX } from "./constants.js";
+import { CONTEXT_PREFIX, REACTIVE_LIST_ELEMENT } from "./constants.js";
 import * as assert from "./assertions.js";
 
 function getJSXProperties(t, path, component = false) {
@@ -85,6 +85,10 @@ function getObservableBinding(path, name) {
   const binding = path.scope.getBinding(name);
   if (!binding) return;
 
+
+  if (path.node.type === "Identifier" && path.node.name.startsWith(REACTIVE_LIST_ELEMENT))
+    return binding
+
   const init = binding.path.node.init;
 
   if (!init) {
@@ -120,7 +124,6 @@ function findNestedObservables(path) {
         return true;
       }
     }
-
   });
 }
 

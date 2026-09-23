@@ -1,10 +1,70 @@
 import * as assert from "../assertions.js";
 import * as query from "../query.js";
 import * as utils from "../utils.js";
-import generatePkg from "@babel/generator";
-import { LIB_NAME, REACTIVE_LIST, REACTIVE_LIST_KEY_PROP } from "../constants.js";
-const generate = generatePkg.default || generatePkg;
+import { LIB_NAME, REACTIVE_LIST, REACTIVE_LIST_ELEMENT, REACTIVE_LIST_INDEX, REACTIVE_LIST_KEY_PROP } from "../constants.js";
 
+const transformReactiveListBodyVariables = (t, path) => {
+    const reactiveListIndexId = t.identifier(REACTIVE_LIST_INDEX);
+    const reactiveListElementId = t.identifier(REACTIVE_LIST_ELEMENT);
+    const elementParam = path.node?.params?.[0]
+
+    if (elementParam) {
+        const binding = path.scope.getBinding(elementParam.name);
+
+        if (binding) {
+            binding.referencePaths.forEach((refPath) => {
+                refPath.replaceWith(reactiveListElementId);
+            })
+
+            path.scope.rename(elementParam.name, reactiveListElementId.name);
+        }
+
+        path.scope.rename(elementParam.name, reactiveListElementId.name);
+    }
+
+    const idxParam = path.node?.params?.[1]
+
+    if (idxParam) {
+        const bPath = path.get('body');
+
+        if (bPath) {
+            const idxBinding = bPath.scope.getBinding(idxParam?.name)
+            if (!idxBinding) {
+                return
+            }
+
+            idxBinding.referencePaths.forEach((refPath) => {
+                refPath.replaceWith(t.memberExpression(reactiveListElementId, reactiveListIndexId));
+            });
+
+            path.replaceWith(t.arrowFunctionExpression([reactiveListElementId], path.node.body))
+        }
+    }
+}
+
+const transformArrowFunctionExpression = (t, path) => {
+    if (path?.parent?.type === "JSXExpressionContainer") {
+        const parentOfParent = path?.parentPath?.parentPath
+        if (!parentOfParent) return
+
+        if (parentOfParent?.node?.type === "JSXElement" && parentOfParent?.node?.openingElement?.name?.name === "ReactiveList") {
+
+            // normalizes parameters of the arrow function to an identifier, to handle only the one type
+            utils.transformObjectPatternToIdentifier(t, path.get('params.0'))
+            path.scope.crawl()
+
+            utils.transformArrowFunctionBodyToBlockStatement(t, path.get('body'))
+            path.scope.crawl()
+
+            transformReactiveListBodyVariables(t, path)
+            path.scope.crawl()
+
+            return
+        }
+
+        return
+    }
+}
 
 const transformCallExpression = (t, path) => {
     if (path?.parent?.type !== "JSXExpressionContainer") return
@@ -13,14 +73,10 @@ const transformCallExpression = (t, path) => {
     const obj = path.node.callee?.object
     if (obj?.type !== "Identifier") return
 
-    let propIdentifier = false;
-    path.traverse({
-        Identifier: (idPath) => {
-            if (idPath.node === obj) {
-                propIdentifier = utils.isPropIdentifier(idPath)
-            }
-        }
-    })
+
+    const objPath = path.get('callee.object');
+    const propIdentifier = utils.isPropIdentifier(objPath)
+
 
 
     if (!query.getObservableBinding(path, obj.name) && !propIdentifier) return
@@ -28,27 +84,78 @@ const transformCallExpression = (t, path) => {
     const data = obj.name
 
 
-    const firstArg = path.node?.arguments?.[0]
-
+    let firstArg = path.node?.arguments?.[0]
     if (firstArg?.type !== "ArrowFunctionExpression") {
         return
     }
 
-    const id = firstArg?.params?.[0]
-    const body = firstArg.body
-    const openingElement = body?.openingElement
-    const keyExp = openingElement?.attributes?.find(attr => {
-        if (attr.name?.name === "key") {
-            if (attr.value?.type === "JSXExpressionContainer") {
-                return attr.value.expression
+    // normalizes parameters of the arrow function to an identifier, to handle only the one type
+    utils.transformObjectPatternToIdentifier(t, path.get('arguments.0.params.0'))
+    path.scope.crawl()
+
+    utils.transformArrowFunctionBodyToBlockStatement(t, path.get('arguments.0.body'))
+    path.scope.crawl()
+
+    firstArg = path.node?.arguments?.[0]
+
+
+    let keyExp
+    let body = path.node?.arguments?.[0]?.body
+    if (!body) return
+
+    if (body?.type === "BlockStatement") {
+        body?.body?.forEach(stmt => {
+            if (stmt?.type !== "ReturnStatement") return
+            const firstArg = stmt.argument
+            if (firstArg?.type !== "JSXElement") return
+
+            const openingElement = firstArg?.openingElement
+            openingElement?.attributes?.forEach(attr => {
+                if (attr.name?.name === "key") {
+                    if (attr.value?.type === "JSXExpressionContainer") {
+                        keyExp = attr.value.expression
+                    }
+                }
+            })
+        })
+    } else {
+        const openingElement = body?.openingElement
+        openingElement?.attributes?.forEach(attr => {
+            if (attr.name?.name === "key") {
+                if (attr.value?.type === "JSXExpressionContainer") {
+                    keyExp = attr.value.expression
+                }
             }
-        }
-    })
+        })
+    }
+
+    if (!keyExp) throw new Error("Mapping a observable array requires a key prop in the JSX element")
+
+
+    const clonedKeyExp = t.cloneNode(keyExp, true);
+    const clonedParams = firstArg?.params
+        ? firstArg.params.map(p => t.cloneNode(p, true))
+        : [];
+
+    const getKeyArrowFunc = t.arrowFunctionExpression(clonedParams, clonedKeyExp);
+
+    const firstArgPath = path.get('arguments.0');
+    if (!firstArgPath || !firstArgPath.isArrowFunctionExpression()) return
+
+    transformReactiveListBodyVariables(t, firstArgPath)
+    path.scope.crawl()
+
+    firstArg = t.cloneWithoutLoc(path.node)?.arguments?.[0]
+    const id = firstArg?.params?.[0]
+    body = firstArg.body
+
+
 
     if (!id || !keyExp || !body) return
 
-    const getKeyArrowFunc = t.arrowFunctionExpression(firstArg.params, keyExp.value.expression)
+
     const bodyArrowFunc = t.arrowFunctionExpression(firstArg.params, body)
+
 
     const callee = t.memberExpression(t.identifier(LIB_NAME), t.identifier(REACTIVE_LIST));
     const callExpression = t.callExpression(callee, [
@@ -70,17 +177,20 @@ const transformJSXElement = (t, path, inner = false) => {
     if (tagName === "ReactiveList") {
         const fnName = "reactiveList";
 
+        const arrowFnPath = path.get("children.0.expression")
+
+        if (arrowFnPath?.type !== "ArrowFunctionExpression") {
+            throw new Error("ReactiveList required an arrow function in the children")
+        }
+
         let data = null;
         let key = null;
-        let children = t.arrayExpression([]);
         let body = null
         const openingEl = path.node.openingElement
-
 
         if (!path.node.children || path.node.children.length === 0) throw new Error("Missing children in ReactiveList")
         path.node.children.forEach(child => {
             if (child.type === "JSXText") return
-
             if (child.type === "JSXExpressionContainer" && child.expression.type === "ArrowFunctionExpression") {
                 body = child.expression
             } else {
@@ -104,11 +214,6 @@ const transformJSXElement = (t, path, inner = false) => {
             }
         });
 
-        path.traverse({
-            JSXElement: (path) => transformJSXElement(t, path, true),
-        });
-
-
         if (!key) {
             throw new Error("Missing required prop 'key' in ReactiveList")
         }
@@ -122,25 +227,24 @@ const transformJSXElement = (t, path, inner = false) => {
         }
 
         if (body.type !== "ArrowFunctionExpression") throw new Error("Invalid body type in ReactiveList")
-        body = t.arrowFunctionExpression(body.params, body.body)
+        const arrowFnBody = t.cloneWithoutLoc(body)
 
         const callee = t.memberExpression(reactIdentifier, t.identifier(fnName));
         const callExpression = t.callExpression(callee, [
             data,
             t.objectExpression([t.objectProperty(t.identifier("getKey"), key)]),
-            body,
+            arrowFnBody,
         ]);
 
-
-        path.replaceWith(callExpression, path.node)
+        path.replaceWith(callExpression)
     }
-
 };
 
 export default {
     name: "Transform Reactive List",
     preJSX: {
         CallExpression: transformCallExpression,
+        ArrowFunctionExpression: transformArrowFunctionExpression
     },
     JSX: {
         JSXElement: transformJSXElement

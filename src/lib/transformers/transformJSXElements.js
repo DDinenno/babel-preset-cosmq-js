@@ -11,6 +11,9 @@ const transformJSXElement = (t, path, inner = false) => {
 
     var reactIdentifier = t.identifier("Cosmq");
 
+
+    if (tagName === "ReactiveList") return
+
     if (tagName[0] === tagName[0].toUpperCase()) {
 
         const componentName = tagName.replace(/^Component_/, "");
@@ -73,7 +76,14 @@ const transformJSXExpressionContainer = (t, path) => {
         if (returnIndex !== -1) {
             return path.replaceWith(path.node.expression);
         }
-    } else path.replaceWith(path.node.expression);
+    } else {
+
+        if (!path.parentPath.isJSXAttribute()) {
+            path.replaceWith(path.node.expression);
+            return;
+        }
+
+    }
 }
 
 export default {
