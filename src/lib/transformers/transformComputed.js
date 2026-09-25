@@ -2,54 +2,59 @@ import * as assert from "../assertions.js";
 import * as query from "../query.js";
 import * as utils from "../utils.js";
 
-const transformRemoveInnerCallExpComputedCalls = (t, p, excludeNodes = []) => {
-    if (excludeNodes && excludeNodes.find(n => n === p.node)) return
+const transformRemoveInnerCallExpComputedCalls = (t, path, excludeNodes = []) => {
+    path.traverse({
+        CallExpression(p) {
+            if (excludeNodes && excludeNodes.find(n => n === p.node)) return
 
-    // Removes inner computed calls
-    if (assert.isWrappedInComputedFunc(p) || true) {
-        if (p.node.callee.name !== "compute") return
+            // Removes inner computed calls
+            if (assert.isWrappedInComputedFunc(p) || true) {
+                if (p.node.callee.name !== "compute") return
 
-        const callbackArg = p.node.arguments[0];
+                const callbackArg = p.node.arguments[0];
 
 
-        if (callbackArg && (callbackArg.type === 'ArrowFunctionExpression' || callbackArg.type === 'FunctionExpression')) {
-            const functionBody = callbackArg.body;
+                if (callbackArg && (callbackArg.type === 'ArrowFunctionExpression' || callbackArg.type === 'FunctionExpression')) {
+                    const functionBody = callbackArg.body;
 
-            if (functionBody.type === 'BlockStatement') {
-                const returnStmt = functionBody.body.find(st => st.type === 'ReturnStatement');
+                    if (functionBody.type === 'BlockStatement') {
+                        const returnStmt = functionBody.body.find(st => st.type === 'ReturnStatement');
 
-                if (functionBody.body.length == 1 && returnStmt && returnStmt.argument) {
-                    p.replaceWith(returnStmt.argument);
-                    t.addComment(returnStmt.argument, "leading", "COSMQ - Removed Nested Compute 1", false);
-                } else {
+                        if (functionBody.body.length == 1 && returnStmt && returnStmt.argument) {
+                            p.replaceWith(returnStmt.argument);
+                            t.addComment(returnStmt.argument, "leading", "COSMQ - Removed Nested Compute 1", false);
+                        } else {
 
-                    const exp = t.callExpression(
-                        t.arrowFunctionExpression(
-                            [],
-                            t.cloneWithoutLoc(functionBody)
-                        ),
-                        []
-                    )
-                    p.replaceWith(exp);
-                    t.addComment(exp, "leading", "COSMQ - Removed Nested Compute", false);
+                            const exp = t.callExpression(
+                                t.arrowFunctionExpression(
+                                    [],
+                                    t.cloneWithoutLoc(functionBody)
+                                ),
+                                []
+                            )
+                            p.replaceWith(exp);
+                            t.addComment(exp, "leading", "COSMQ - Removed Nested Compute", false);
+
+                        }
+
+
+                    }
+                    else if (p.node.type === "CallExpression" && p.node.callee.name === "compute") {
+                        p.replaceWith(functionBody);
+                        t.addComment(functionBody, "leading", "COSMQ - Removed Nested Compute 2", false);
+                    }
+                } else if (callbackArg) {
+                    if (callbackArg.type !== "ConditionalExpression") return
+
+                    p.replaceWith(callbackArg);
+                    t.addComment(callbackArg, "leading", "COSMQ - Removed Nested Compute 3", false);
 
                 }
-
-
             }
-            else if (p.node.type === "CallExpression" && p.node.callee.name === "compute") {
-                p.replaceWith(functionBody);
-                t.addComment(functionBody, "leading", "COSMQ - Removed Nested Compute 2", false);
-            }
-        } else if (callbackArg) {
-            if (callbackArg.type !== "ConditionalExpression") return
-
-            p.replaceWith(callbackArg);
-            t.addComment(callbackArg, "leading", "COSMQ - Removed Nested Compute 3", false);
-
         }
-    }
+    })
 
+    path.scope.crawl()
 }
 
 const transformCallExpression = (t, path) => {
@@ -108,6 +113,7 @@ const transformCallExpression = (t, path) => {
         }
     }
 };
+
 
 export const transformComputed = (t, path) => {
     if (assert.isInnerFunction(path)) return;
