@@ -91,9 +91,42 @@ const transformAssignment = (t, path) => {
             "Observable cannot be set outside the component it was initialized in!",
         );
 
+
+    let rightNode = path.node.right
+
+    if (path.node.operator !== "=") {
+        const operator = path.node.operator.replace("=", "")
+        rightNode = t.binaryExpression(operator, path.node.left, rightNode)
+    }
+
     const exp = t.callExpression(
         t.memberExpression(t.identifier(assignTo), t.identifier("set")),
-        [path.node.right],
+        [rightNode],
+    )
+
+    path.replaceWith(exp);
+};
+
+const transformUpdateExpression = (t, path) => {
+    if (!path || !path.node) return
+
+    let assignTo = path.node.argument.name;
+
+    const observable = query.getObservableBinding(path, assignTo);
+    if (!observable) return;
+
+    if (observable.path.node.type !== "VariableDeclarator")
+        throw new Error(
+            "Observable cannot be set outside the component it was initialized in!",
+        );
+
+
+    const operator = path.node.operator[0]
+    const rightNode = t.binaryExpression(operator, path.node.argument, t.numericLiteral(1))
+
+    const exp = t.callExpression(
+        t.memberExpression(t.identifier(assignTo), t.identifier("set")),
+        [rightNode],
     )
 
     path.replaceWith(exp);
@@ -103,6 +136,7 @@ export default {
     name: "Transform Observables",
     preJSX: {
         AssignmentExpression: transformAssignment,
+        UpdateExpression: transformUpdateExpression,
         Identifier: transformIdentifier
     }
 }
