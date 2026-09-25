@@ -2,6 +2,9 @@ import * as assert from "../assertions.js";
 import * as query from "../query.js";
 import * as utils from "../utils.js";
 import { LIB_NAME, REACTIVE_LIST, REACTIVE_LIST_ELEMENT, REACTIVE_LIST_INDEX, REACTIVE_LIST_KEY_PROP } from "../constants.js";
+import generatePkg from "@babel/generator";
+const generate = generatePkg.default || generatePkg;
+
 
 const transformReactiveListBodyVariables = (t, path) => {
     const reactiveListIndexId = t.identifier(REACTIVE_LIST_INDEX);
@@ -68,7 +71,7 @@ const transformArrowFunctionExpression = (t, path) => {
 
 const transformCallExpression = (t, path) => {
     if (path?.parent?.type !== "JSXExpressionContainer") return
-    if (!assert.isCallMemberExpExpression(path, "map")) return;
+    if (!assert.isCallMemberExpExpression(path, "$map")) return;
 
     const obj = path.node.callee?.object
     if (obj?.type !== "Identifier") return
@@ -84,8 +87,8 @@ const transformCallExpression = (t, path) => {
     const data = obj.name
 
 
-    let firstArg = path.node?.arguments?.[0]
-    if (firstArg?.type !== "ArrowFunctionExpression") {
+    let arrowFn = path.node?.arguments?.[0]
+    if (arrowFn?.type !== "ArrowFunctionExpression") {
         return
     }
 
@@ -93,11 +96,10 @@ const transformCallExpression = (t, path) => {
     utils.transformObjectPatternToIdentifier(t, path.get('arguments.0.params.0'))
     path.scope.crawl()
 
-    utils.transformArrowFunctionBodyToBlockStatement(t, path.get('arguments.0.body'))
+    utils.transformArrowFunctionBodyToBlockStatement(t, path.get('arguments.0'))
     path.scope.crawl()
 
-    firstArg = path.node?.arguments?.[0]
-
+    arrowFn = path.node?.arguments?.[0]
 
     let keyExp
     let body = path.node?.arguments?.[0]?.body
@@ -106,10 +108,10 @@ const transformCallExpression = (t, path) => {
     if (body?.type === "BlockStatement") {
         body?.body?.forEach(stmt => {
             if (stmt?.type !== "ReturnStatement") return
-            const firstArg = stmt.argument
-            if (firstArg?.type !== "JSXElement") return
+            const arg = stmt.argument
+            if (arg?.type !== "JSXElement") return
 
-            const openingElement = firstArg?.openingElement
+            const openingElement = arg?.openingElement
             openingElement?.attributes?.forEach(attr => {
                 if (attr.name?.name === "key") {
                     if (attr.value?.type === "JSXExpressionContainer") {
@@ -118,44 +120,51 @@ const transformCallExpression = (t, path) => {
                 }
             })
         })
-    } else {
-        const openingElement = body?.openingElement
-        openingElement?.attributes?.forEach(attr => {
-            if (attr.name?.name === "key") {
-                if (attr.value?.type === "JSXExpressionContainer") {
-                    keyExp = attr.value.expression
-                }
-            }
-        })
     }
 
     if (!keyExp) throw new Error("Mapping a observable array requires a key prop in the JSX element")
 
 
     const clonedKeyExp = t.cloneNode(keyExp, true);
-    const clonedParams = firstArg?.params
-        ? firstArg.params.map(p => t.cloneNode(p, true))
+    const clonedParams = arrowFn?.params
+        ? arrowFn.params.map(p => t.cloneNode(p, true))
         : [];
 
     const getKeyArrowFunc = t.arrowFunctionExpression(clonedParams, clonedKeyExp);
 
-    const firstArgPath = path.get('arguments.0');
-    if (!firstArgPath || !firstArgPath.isArrowFunctionExpression()) return
+    const arrowFnPath = path.get('arguments.0');
+    if (!arrowFnPath || !arrowFnPath.isArrowFunctionExpression()) return
 
-    transformReactiveListBodyVariables(t, firstArgPath)
+    transformReactiveListBodyVariables(t, arrowFnPath)
     path.scope.crawl()
 
-    firstArg = t.cloneWithoutLoc(path.node)?.arguments?.[0]
-    const id = firstArg?.params?.[0]
-    body = firstArg.body
+    arrowFn = t.cloneWithoutLoc(path.node)?.arguments?.[0]
+    const id = arrowFn?.params?.[0]
 
+    if (!id || !keyExp || !arrowFn.body) return
 
+    const bodyPaths = path.get("arguments.0.body.body");
+    const returnStmtPath = bodyPaths.find(p => p.isReturnStatement());
+    if (!returnStmtPath) {
+        throw new Error("Could not find a return statement");
+    }
 
-    if (!id || !keyExp || !body) return
+    const openingElementPath = returnStmtPath.get("argument.openingElement");
+    if (!openingElementPath.node) {
+        throw new Error("Could not find opening element");
+    }
 
+    openingElementPath.traverse({
+        JSXAttribute(path) {
+            if (path.parentPath !== openingElementPath) return
+            if (path.node.name.name === "key") {
+                path.remove()
+            }
+        }
+    })
+    path.scope.crawl()
 
-    const bodyArrowFunc = t.arrowFunctionExpression(firstArg.params, body)
-
+    const bodyArrowFunc = t.arrowFunctionExpression(arrowFn.params, arrowFn.body)
 
     const callee = t.memberExpression(t.identifier(LIB_NAME), t.identifier(REACTIVE_LIST));
     const callExpression = t.callExpression(callee, [
