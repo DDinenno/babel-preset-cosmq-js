@@ -74,6 +74,7 @@ function isPropIdentifier(path) {
 
 function findNestedObservables(path) {
   const filteredNodes = []
+  const usedInAssignmentExpression = []
 
   const observables = query.findNestedIdentifiers(path, (p, found) => {
     if (isPropIdentifier(p)) return true;
@@ -85,6 +86,13 @@ function findNestedObservables(path) {
   });
 
   observables.forEach(p => {
+    if (
+      p?.parent?.type === "AssignmentExpression" && p?.parent?.left === p.node ||
+      p?.parent?.type === "UpdateExpression") {
+      return
+    }
+
+    // console.log("parentType", p.node.name, p?.parent?.type, p.parentPath && generate(p.parentPath.node).code)
     if (!filteredNodes.find(fp => fp.node.name === p.node.name)) {
       filteredNodes.push(p)
     }
@@ -211,8 +219,13 @@ function transformObservableMemberExpToFlatIdentifier(t, parentPath) {
 
 
 function transformArrowFunctionBodyToBlockStatement(t, path) {
-  if (!path || path.type !== "ArrowFunctionExpression" || path.node?.body?.type === "BlockStatement") return
-
+  if (
+    !path ||
+    path.type !== "ArrowFunctionExpression" ||
+    path.node?.body?.type === "BlockStatement"
+  ) {
+    return
+  }
 
   let exp = path.node.body
 
