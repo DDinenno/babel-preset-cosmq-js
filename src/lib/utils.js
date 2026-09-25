@@ -74,7 +74,6 @@ function isPropIdentifier(path) {
 
 function findNestedObservables(path) {
   const filteredNodes = []
-  const usedInAssignmentExpression = []
 
   const observables = query.findNestedIdentifiers(path, (p, found) => {
     if (isPropIdentifier(p)) return true;
