@@ -251,8 +251,32 @@ pluginTester({
       code: `
         const Component_EffectDemo = () => {
           const count = observe(0);
+          const a = observe(1)
+          const b = observe(1)
+          const c = observe(1)
+          const d = observe(2)
+          const e = observe(4)
+          const f = observe(4)
+          const g = observe(4)
+          const h = observe(4)
+          const i = observe(4)
+          const j = observe(4)
+
           effect(() => {
+            a = 22 + count
+            b --
+            d ++
+            c -= 1
+            e += 1
+            g *= 2
+            f = g + 4
+            h >>= 2
+            i **= 2
+            j *= 3
+          
             console.log(count);
+
+            // deps should only include 'count' and 'g', since they are the only ones being used in right side assignment
           });
           return <div>Demo</div>;
         };
@@ -373,13 +397,13 @@ pluginTester({
 
           return (
             <div>
-              {items.map(item => (
+              {items.$map(item => (
                 <div key={item.id}>
                   {item.name}
                 </div>
               ))}
 
-              {items2.map(({id, name}, i) => {
+              {items2.$map(({id, name}, i) => {
                 return (
                   <div key={id} style={{
                     opacity: activeItem?.id === id ? 1 * i : 0.3,
@@ -543,7 +567,6 @@ pluginTester({
         `,
 
     },
-
     "allows for deeply nested observables": {
       code: `
         const Component_DeeplyNested = () => {

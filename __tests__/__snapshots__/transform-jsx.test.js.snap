@@ -509,8 +509,32 @@ exports[`transform-jsx 26. automatically infers dependencies for effect shorthan
 
 const Component_EffectDemo = () => {
   const count = observe(0);
+  const a = observe(1)
+  const b = observe(1)
+  const c = observe(1)
+  const d = observe(2)
+  const e = observe(4)
+  const f = observe(4)
+  const g = observe(4)
+  const h = observe(4)
+  const i = observe(4)
+  const j = observe(4)
+
   effect(() => {
+    a = 22 + count
+    b --
+    d ++
+    c -= 1
+    e += 1
+    g *= 2
+    f = g + 4
+    h >>= 2
+    i **= 2
+    j *= 3
+  
     console.log(count);
+
+    // deps should only include 'count' and 'g', since they are the only ones being used in right side assignment
   });
   return <div>Demo</div>;
 };
@@ -520,9 +544,31 @@ const Component_EffectDemo = () => {
 
 const Component_EffectDemo = () => {
   const count = observe(0);
+  const a = observe(1);
+  const b = observe(1);
+  const c = observe(1);
+  const d = observe(2);
+  const e = observe(4);
+  const f = observe(4);
+  const g = observe(4);
+  const h = observe(4);
+  const i = observe(4);
+  const j = observe(4);
   effect(() => {
+    a.set(22 + count.value);
+    b.set(b.value - 1);
+    d.set(d.value + 1);
+    c.set(c.value - 1);
+    e.set(e.value + 1);
+    g.set(g.value * 2);
+    f.set(g.value + 4);
+    h.set(h.value >> 2);
+    i.set(i.value ** 2);
+    j.set(j.value * 3);
     console.log(count.value);
-  }, [count]);
+
+    // deps should only include 'count' and 'g', since they are the only ones being used in right side assignment
+  }, [count, g]);
   return Cosmq.registerElement("div", {}, ["Demo"]);
 };
 
@@ -764,13 +810,13 @@ const Component_Project = ({items}) => {
 
   return (
     <div>
-      {items.map(item => (
+      {items.$map(item => (
         <div key={item.id}>
           {item.name}
         </div>
       ))}
 
-      {items2.map(({id, name}, i) => {
+      {items2.$map(({id, name}, i) => {
         return (
           <div key={id} style={{
             opacity: activeItem?.id === id ? 1 * i : 0.3,
@@ -801,17 +847,12 @@ const Component_Project = ({
   const activeItem = observe(null);
   return Cosmq.registerElement("div", {}, [/*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items, {
     getKey: item => item.id
-  }, _Cosmq_element__ => Cosmq.registerElement("div", {
-    "key": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
-      return _Cosmq_element__.value.id;
-    }, [_Cosmq_element__])
-  }, [Cosmq.compute(() => _Cosmq_element__.value.name, [_Cosmq_element__])])), /*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items2, {
+  }, _Cosmq_element__ => {
+    return Cosmq.registerElement("div", {}, [Cosmq.compute(() => _Cosmq_element__.value.name, [_Cosmq_element__])]);
+  }), /*COSMQ - Injected ReactiveList*/Cosmq.reactiveList(items2, {
     getKey: (_props, i) => _props.id
   }, _Cosmq_element__ => {
     return Cosmq.registerElement("div", {
-      "key": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
-        return _Cosmq_element__.value.id;
-      }, [_Cosmq_element__]),
       "style": /*COSMQ - Injected Computed wrapper*/Cosmq.compute(() => {
         return {
           opacity: activeItem.value?.id === _Cosmq_element__.value.id ? 1 * _Cosmq_element__.value._Cosmq_index__ : 0.3,
